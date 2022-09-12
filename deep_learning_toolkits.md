@@ -13,7 +13,7 @@ I use the term "functional transformation" here to mean changing one procedure i
 
 Theano, now known as the Apsara project, was one of the first deep learning toolkits. It has an API that lets users build the IR as a data structure in memory. Then, we can tell Theano to do the autograd and turn the result into a Python function.
 
-```
+```python
 import aesara
 from aesara import tensor as at
 
