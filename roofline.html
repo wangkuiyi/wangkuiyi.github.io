@@ -1,0 +1,136 @@
+<link rel="stylesheet" href="https://dev.to/assets/minimal-177d412a05d28a9e4b15d0d30251d9a04f953707b9cee2e223af0803b8650df4.css" media="all" id="main-minimal-stylesheet" />
+<link rel="stylesheet" href="https://dev.to/assets/views-64d5fff92cc913e57b90d60da8f10d00138c946bcd9212518cbdbd2fb73efe93.css" media="all" id="main-views-stylesheet" />
+<link rel="stylesheet" href="https://dev.to/assets/crayons-c7c9b51d631bafd6e567aba1b6c187226289b036411a507a7341e4c9a6bd2588.css" media="all" id="main-crayons-stylesheet" />
+
+<script type="text/javascript"
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+<h1 id="roofline-analysis">Roofline Analysis</h1>
+<p>In 2008, the inventor of RISC-V proposed the concept of roofline
+analysis in <a
+href="https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf">a
+paper</a>. The examples in the paper focused on AMD Opteron CPUs. Later,
+the analysis became more popular when NVIDIA implemented it in <a
+href="https://developer.nvidia.com/blog/accelerating-hpc-applications-with-nsight-compute-roofline-analysis/">Nsight</a>,
+its CUDA GPU profiling toolkit. Since then, many blog posts and YouTube
+videos have explained roofline analysis. I’ve been considering how to
+explain this concept more concisely than most of the resources I’ve
+encountered. Here’s my attempt.</p>
+<h2 id="roofline-model">Roofline Model</h2>
+<p>The roofline model estimates the upper bound of a chip’s
+performance.</p>
+<p>A chip has a peak performance, denoted as <span
+class="math inline">\(\pi\)</span>, measured in FLOPS (floating-point
+operations per second), determined by its computational circuit.</p>
+<p>When running an application, the computational circuit often has to
+wait for data to be loaded or saved. If the memory bandwidth is <span
+class="math inline">\(\beta\)</span> (in bytes per second) and the
+application performs <span class="math inline">\(I\)</span> flops per
+byte, the maximum achievable performance becomes <span
+class="math inline">\(\beta I\)</span>.</p>
+<p>Thus, the peak performance is described by a roofline-shaped
+curve:</p>
+<p><span class="math display">\[ \max(\beta I, \pi) \]</span></p>
+<p>The term <span class="math inline">\(\beta I\)</span> depends on
+<span class="math inline">\(I\)</span>, so we plot this relationship on
+a 2-dimensional graph, where the x-axis represents <em>arithmetic
+intensity</em> <span class="math inline">\(I\)</span> and the y-axis
+represents performance in FLOPS.</p>
+<p><img
+src="https://docs.nersc.gov/tools/performance/roofline/Roofline-intro.png" /></p>
+<h2 id="log-log-plot">Log-Log Plot</h2>
+<p>Modern chips can achieve <span class="math inline">\(\pi\)</span> in
+the teraflops range, which is so large that we typically use a log-scale
+for the y-axis.</p>
+<p>The value of <span class="math inline">\(I\)</span> (arithmetic
+intensity) can range from below 1 to very large values. For example, an
+element-wise operation on <code>fp32</code> tensors must first load a
+4-byte <code>fp32</code> value before processing it, and then write the
+4-byte result. Its arithmetic intensity is thus:</p>
+<p><span class="math display">\[ \frac{1 \text{ flop}}{8 \text{ bytes}}
+\]</span></p>
+<p>On the other hand, the multiplication of two <code>fp16</code>
+tensors of size <span class="math inline">\(n\times n\)</span> has an
+arithmetic intensity of:</p>
+<p><span class="math display">\[ \frac{2n^3}{2n^2 + 2n^2} = \frac{n}{2}
+\]</span></p>
+<p>Given that <span class="math inline">\(n\)</span> can reach into the
+thousands, the arithmetic intensity can also scale into the thousands.
+This wide range of <span class="math inline">\(I\)</span> suggests that
+a log-scale is appropriate for the x-axis as well.</p>
+<h2 id="plotting-in-log-log-scale">Plotting in Log-Log Scale</h2>
+<p>Plotting <span class="math inline">\(\pi\)</span> (constant peak
+performance) on a log-log plot results in a horizontal line, similar to
+its representation on a linear plot.</p>
+<p>However, plotting the linear function <span class="math inline">\(y =
+\beta I\)</span> on a log-log plot differs from its linear
+counterpart.</p>
+<p>When plotting a point <span class="math inline">\((y, I)\)</span> in
+log-log scale, the coordinates are transformed to <span
+class="math inline">\((\log y, \log I)\)</span>.</p>
+<p>The slope of <span class="math inline">\(y = \beta I\)</span> between
+two points in the range <span class="math inline">\([I_1, I_2]\)</span>
+is given by:</p>
+<p><span class="math display">\[
+\frac{\log y_2 - \log y_1}{\log I_2 - \log I_1} = \frac{\log
+(y_2/y_1)}{\log (I_2/I_1)} = 1
+\]</span></p>
+<p>Thus, in a log-log plot, all linear functions have a slope of 45
+degrees.</p>
+<p>The intercept occurs when the x-coordinate <span
+class="math inline">\(\log I = 0\)</span>, or <span
+class="math inline">\(I = 1\)</span>, giving us:</p>
+<p><span class="math display">\[ \log (\beta \cdot 1) = \log \beta
+\]</span></p>
+<p>Therefore, the value of <span class="math inline">\(\beta\)</span>,
+which defines the slope in a linear plot, determines the intercept in a
+log-log plot.</p>
+<p>When <span class="math inline">\(\beta &lt; 1\)</span>, <span
+class="math inline">\(\log \beta &lt; 0\)</span>. When <span
+class="math inline">\(\beta &gt; 1\)</span>, <span
+class="math inline">\(\log \beta &gt; 0\)</span>.</p>
+<h2 id="performance-tuning">Performance Tuning</h2>
+<h3 id="use-lower-bits">Use Lower-bits</h3>
+<p>Inference in deep neural networks using <code>fp16</code> typically
+does not lead to a significant loss in precision compared to
+<code>fp32</code>. However, using <code>fp16</code> halves the number of
+bytes that need to be loaded and saved, effectively doubling the
+arithmetic intensity <span class="math inline">\(I\)</span>.</p>
+<p>Suppose that, prior to this doubling, <span
+class="math inline">\(I\)</span> lies below the diagonal line on the
+roofline model, meaning the application is constrained by memory
+bandwidth—i.e., it is memory-bound. By doubling <span
+class="math inline">\(I\)</span> to <span
+class="math inline">\(2I\)</span>, may make this new value lies below
+the horizontal line representing peak performance, the application can
+potentially shift from being memory-bound to achieving the chip’s peak
+performance.</p>
+<h3 id="operation-fusing">Operation Fusing</h3>
+<p>Another commonly used optimization is <strong>operation
+fusion</strong>, which reduces the number of loads and saves for
+intermediate results, often referred to as activations. This
+optimization also increases the arithmetic intensity <span
+class="math inline">\(I\)</span>, helping the application get closer to
+the peak performance.</p>
+<h3 id="suboptimal-memory-utilization">Suboptimal Memory
+Utilization</h3>
+<p>In some cases, an application may fail to fully utilize the available
+memory bandwidth <span class="math inline">\(\beta\)</span>, resulting
+in an effective bandwidth <span
+class="math inline">\(\beta&#39;\)</span> that is less than <span
+class="math inline">\(\beta\)</span>. Since the bandwidth defines the
+intercept in the log-log plot, the diagonal line corresponding to <span
+class="math inline">\(\beta&#39; I\)</span> would have the same
+45-degree slope but a lower intercept compared to <span
+class="math inline">\(\beta I\)</span>.</p>
+<p><img
+src="https://docs.nersc.gov/tools/performance/roofline/Roofline-hier.png" /></p>
+<h3 id="suboptimal-computational-utilization">Suboptimal Computational
+Utilization</h3>
+<p>Similarly, a lack of certain optimization skills may prevent an
+application from fully utilizing the chip’s peak performance <span
+class="math inline">\(\pi\)</span>. In this case, the actual performance
+would be represented by a lower value, <span
+class="math inline">\(\pi&#39;\)</span>, which would appear as a
+horizontal line below the peak <span class="math inline">\(\pi\)</span>
+in the roofline plot.</p>
