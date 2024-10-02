@@ -16,6 +16,8 @@ $$ \max(\beta I, \pi) $$
 
 The term $\beta I$ depends on $I$, so we plot this relationship on a 2-dimensional graph, where the x-axis represents *arithmetic intensity* $I$ and the y-axis represents performance in FLOPS.
 
+![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Example_of_a_naive_Roofline_model.svg)
+
 ## Log-Log Plot
 
 Modern chips can achieve $\pi$ in the teraflops range, which is so large that we typically use a log-scale for the y-axis.
@@ -53,3 +55,23 @@ $$ \log (\beta \cdot 1) = \log \beta $$
 Therefore, the value of $\beta$, which defines the slope in a linear plot, determines the intercept in a log-log plot.
 
 When $\beta < 1$, $\log \beta < 0$. When $\beta > 1$, $\log \beta > 0$.
+
+## Performance Tuning
+
+### Use Lower-bits
+Inference in deep neural networks using `fp16` typically does not lead to a significant loss in precision compared to `fp32`. However, using `fp16` halves the number of bytes that need to be loaded and saved, effectively doubling the arithmetic intensity $I$.
+
+Suppose that, prior to this doubling, $I$ lies below the diagonal line on the roofline model, meaning the application is constrained by memory bandwidth—i.e., it is memory-bound. By doubling $I$ to $2I$, may make this new value lies below the horizontal line representing peak performance, the application can potentially shift from being memory-bound to achieving the chip's peak performance.
+
+### Operation Fusing
+Another commonly used optimization is **operation fusion**, which reduces the number of loads and saves for intermediate results, often referred to as activations. This optimization also increases the arithmetic intensity $I$, helping the application get closer to the peak performance.
+
+### Suboptimal Memory Utilization
+In some cases, an application may fail to fully utilize the available memory bandwidth $\beta$, resulting in an effective bandwidth $\beta'$ that is less than $\beta$. Since the bandwidth defines the intercept in the log-log plot, the diagonal line corresponding to $\beta' I$ would have the same 45-degree slope but a lower intercept compared to $\beta I$.
+
+![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Roofline_model_bandwidth_ceilings.png)
+
+### Suboptimal Computational Utilization
+Similarly, a lack of certain optimization skills may prevent an application from fully utilizing the chip’s peak performance $\pi$. In this case, the actual performance would be represented by a lower value, $\pi'$, which would appear as a horizontal line below the peak $\pi$ in the roofline plot.
+
+![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Roofline_model_in-core_ceilings.png)
