@@ -16,7 +16,7 @@ $$ \max(\beta I, \pi) $$
 
 The term $\beta I$ depends on $I$, so we plot this relationship on a 2-dimensional graph, where the x-axis represents *arithmetic intensity* $I$ and the y-axis represents performance in FLOPS.
 
-![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Example_of_a_naive_Roofline_model.svg)
+![](https://docs.nersc.gov/tools/performance/roofline/Roofline-intro.png)
 
 ## Log-Log Plot
 
@@ -69,9 +69,7 @@ Another commonly used optimization is **operation fusion**, which reduces the nu
 ### Suboptimal Memory Utilization
 In some cases, an application may fail to fully utilize the available memory bandwidth $\beta$, resulting in an effective bandwidth $\beta'$ that is less than $\beta$. Since the bandwidth defines the intercept in the log-log plot, the diagonal line corresponding to $\beta' I$ would have the same 45-degree slope but a lower intercept compared to $\beta I$.
 
-![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Roofline_model_bandwidth_ceilings.png)
+![](https://docs.nersc.gov/tools/performance/roofline/Roofline-hier.png)
 
 ### Suboptimal Computational Utilization
 Similarly, a lack of certain optimization skills may prevent an application from fully utilizing the chip’s peak performance $\pi$. In this case, the actual performance would be represented by a lower value, $\pi'$, which would appear as a horizontal line below the peak $\pi$ in the roofline plot.
-
-![](https://en.wikipedia.org/wiki/Roofline_model#/media/File:Roofline_model_in-core_ceilings.png)
