@@ -1,34 +1,34 @@
-<link rel="stylesheet" href="https://dev.to/assets/minimal-177d412a05d28a9e4b15d0d30251d9a04f953707b9cee2e223af0803b8650df4.css" media="all" id="main-minimal-stylesheet" />
-<link rel="stylesheet" href="https://dev.to/assets/views-64d5fff92cc913e57b90d60da8f10d00138c946bcd9212518cbdbd2fb73efe93.css" media="all" id="main-views-stylesheet" />
-<link rel="stylesheet" href="https://dev.to/assets/crayons-c7c9b51d631bafd6e567aba1b6c187226289b036411a507a7341e4c9a6bd2588.css" media="all" id="main-crayons-stylesheet" />
-
-<script type="text/javascript"
-  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-</script>
-<h1 id="roofline-analysis">Roofline Analysis</h1>
-<p>In 2008, the inventor of RISC-V proposed the concept of roofline
-analysis in <a
-href="https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf">a
-paper</a>. The examples in the paper focused on AMD Opteron CPUs. Later,
-the analysis became more popular when NVIDIA implemented it in <a
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="roofline-analysis-of-apple-silicon-gpus-using-mlx">Roofline
+Analysis of Apple Silicon GPUs using MLX</h1>
+<p>Yi Wang <a href="mailto:wyi@apple.com"
+class="email">wyi@apple.com</a></p>
+<p>The concept of Roofline analysis was introduced in 2008 in <a
+href="https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf">this
+paper</a>, which focused on AMD Opteron CPUs. Later, NVIDIA incorporated
+Roofline analysis into <a
 href="https://developer.nvidia.com/blog/accelerating-hpc-applications-with-nsight-compute-roofline-analysis/">Nsight</a>,
-its CUDA GPU profiling toolkit. Since then, many blog posts and YouTube
-videos have explained roofline analysis. I’ve been considering how to
-explain this concept more concisely than most of the resources I’ve
-encountered. Here’s my attempt.</p>
-<h2 id="roofline-model">Roofline Model</h2>
-<p>The roofline model estimates the upper bound of a chip’s
-performance.</p>
-<p>A chip has a peak performance, denoted as <span
+its CUDA GPU profiling toolkit. The widespread adoption of CUDA GPUs in
+deep learning has further popularized the use of Roofline analysis. CUDA
+kernel developers use this method to gauge how close their code is to
+reaching the hardware’s theoretical performance limits. Numerous blog
+posts and YouTube videos have since explained Roofline analysis in
+detail. I’ve been exploring ways to explain this concept more concisely
+and illustrate its application on Apple silicon. Here’s my attempt.</p>
+<h2 id="the-roofline-model">The Roofline Model</h2>
+<p>The Roofline model estimates the upper bound of a chip’s performance.
+A chip has a peak performance, denoted as <span
 class="math inline">\(\pi\)</span>, measured in FLOPS (floating-point
-operations per second), determined by its computational circuit.</p>
-<p>When running an application, the computational circuit often has to
-wait for data to be loaded or saved. If the memory bandwidth is <span
+operations per second), determined by its computational circuits.</p>
+<p>Before an application could start computing, it often needs to load
+the data. Similarly, it may need to save the result. This impose another
+limit. If the peak memory access bandwidth is <span
 class="math inline">\(\beta\)</span> (in bytes per second) and the
 application performs <span class="math inline">\(I\)</span> flops per
-byte, the maximum achievable performance becomes <span
+loaded or saved byte, the maximum achievable performance is <span
 class="math inline">\(\beta I\)</span>.</p>
-<p>Thus, the peak performance is described by a roofline-shaped
+<p>The above two limits make the peak performance a roofline-shaped
 curve:</p>
 <p><span class="math display">\[ \max(\beta I, \pi) \]</span></p>
 <p>The term <span class="math inline">\(\beta I\)</span> depends on
@@ -36,8 +36,44 @@ curve:</p>
 a 2-dimensional graph, where the x-axis represents <em>arithmetic
 intensity</em> <span class="math inline">\(I\)</span> and the y-axis
 represents performance in FLOPS.</p>
-<p><img
-src="https://docs.nersc.gov/tools/performance/roofline/Roofline-intro.png" /></p>
+<h2 id="arithmetic-intensity">Arithmetic Intensity</h2>
+<p>The arithmetic intensity is a property of each application denoting
+the ratio between its computation and data accessing. For example, the
+multiplication of a matrix of size <span class="math inline">\(A\times
+B\)</span> and another of <span class="math inline">\(B\times C\)</span>
+involves <span class="math inline">\(A\times C\)</span> dot-products of
+two vectors with length <span class="math inline">\(B\)</span>. Each
+dot-product takes <span class="math inline">\(B\)</span> elementwise
+scalar multiplications and <span class="math inline">\(B\)</span>
+summations. Therefore, the total flops is <span class="math inline">\(2
+A B C\)</span>.</p>
+<p>If each element of the two matrices is in fp16, the multiplication
+needs to load <span class="math inline">\(2 A B + 2 B C\)</span> bytes
+and save the result in <span class="math inline">\(2 A C\)</span> bytes.
+Therefore, the arithmetic intensity <span
+class="math inline">\(I\)</span> of matrix multiplications is</p>
+<p><span class="math display">\[ \frac{ABC}{AB + BC + AC} \]</span></p>
+<p>In a simplified case where <span
+class="math inline">\(A=B=C=n\)</span>, the arithmetic intensity is
+<span class="math inline">\(n/3\)</span>.</p>
+<h2 id="roofline-analysis">Roofline Analysis</h2>
+<p>The following figure presents the analysis of MLX’s matmul on M2
+Ultra. The two straight lines are the thoretical bound of <span
+class="math inline">\(\beta I\)</span> and <span
+class="math inline">\(\pi\)</span>, or, the Roofline model of M2 Ultra.
+According to the <a
+href="https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra/">release
+note of M2 Ultra</a>, its peak memory bandwidth, <span
+class="math inline">\(\beta\)</span>, is 800GB/s. According to <a
+href="https://en.wikipedia.org/wiki/Apple_silicon#Comparison_of_M_series_processors">this
+Wikipedia entry</a>, the peak performance, <span
+class="math inline">\(\pi\)</span>, is 27.199 teraflops/sec, or
+TFLOPS.</p>
+<p><img src="roofline.png" /></p>
+<p>Each dot corresponds to a matrix-multiplication operation that takes
+input matrices in a certain size <span
+class="math inline">\(n=2^i\)</span>. The larger the input matrices, the
+higher the arithmetic intensity of the operation.</p>
 <h2 id="log-log-plot">Log-Log Plot</h2>
 <p>Modern chips can achieve <span class="math inline">\(\pi\)</span> in
 the teraflops range, which is so large that we typically use a log-scale
@@ -46,31 +82,22 @@ for the y-axis.</p>
 intensity) can range from below 1 to very large values. For example, an
 element-wise operation on <code>fp32</code> tensors must first load a
 4-byte <code>fp32</code> value before processing it, and then write the
-4-byte result. Its arithmetic intensity is thus:</p>
-<p><span class="math display">\[ \frac{1 \text{ flop}}{8 \text{ bytes}}
-\]</span></p>
-<p>On the other hand, the multiplication of two <code>fp16</code>
-tensors of size <span class="math inline">\(n\times n\)</span> has an
-arithmetic intensity of:</p>
-<p><span class="math display">\[ \frac{2n^3}{2n^2 + 2n^2} = \frac{n}{2}
-\]</span></p>
-<p>Given that <span class="math inline">\(n\)</span> can reach into the
-thousands, the arithmetic intensity can also scale into the thousands.
-This wide range of <span class="math inline">\(I\)</span> suggests that
-a log-scale is appropriate for the x-axis as well.</p>
-<h2 id="plotting-in-log-log-scale">Plotting in Log-Log Scale</h2>
+4-byte result. Its arithmetic intensity is thus <span
+class="math inline">\(\frac{1}{8}\)</span> FLOPS. However, the
+multiplication of two large matrices may have <span
+class="math inline">\(I\)</span> up to tens of thousands. This wide
+range of <span class="math inline">\(I\)</span> suggests that a
+log-scale is appropriate for the x-axis as well.</p>
 <p>Plotting <span class="math inline">\(\pi\)</span> (constant peak
-performance) on a log-log plot results in a horizontal line, similar to
-its representation on a linear plot.</p>
-<p>However, plotting the linear function <span class="math inline">\(y =
-\beta I\)</span> on a log-log plot differs from its linear
-counterpart.</p>
+performance) on a log-log plot results in a horizontal line, just like
+its representation on a linear plot. However, plotting the linear
+function <span class="math inline">\(y = \beta I\)</span> on a log-log
+plot differs from its linear counterpart.</p>
 <p>When plotting a point <span class="math inline">\((y, I)\)</span> in
 log-log scale, the coordinates are transformed to <span
-class="math inline">\((\log y, \log I)\)</span>.</p>
-<p>The slope of <span class="math inline">\(y = \beta I\)</span> between
-two points in the range <span class="math inline">\([I_1, I_2]\)</span>
-is given by:</p>
+class="math inline">\((\log y, \log I)\)</span>. The slope of <span
+class="math inline">\(y = \beta I\)</span> between two points in the
+range <span class="math inline">\([I_1, I_2]\)</span> is given by:</p>
 <p><span class="math display">\[
 \frac{\log y_2 - \log y_1}{\log I_2 - \log I_1} = \frac{\log
 (y_2/y_1)}{\log (I_2/I_1)} = 1
@@ -84,18 +111,42 @@ class="math inline">\(I = 1\)</span>, giving us:</p>
 \]</span></p>
 <p>Therefore, the value of <span class="math inline">\(\beta\)</span>,
 which defines the slope in a linear plot, determines the intercept in a
-log-log plot.</p>
-<p>When <span class="math inline">\(\beta &lt; 1\)</span>, <span
-class="math inline">\(\log \beta &lt; 0\)</span>. When <span
+log-log plot. When <span class="math inline">\(\beta &lt; 1\)</span>,
+<span class="math inline">\(\log \beta &lt; 0\)</span>. When <span
 class="math inline">\(\beta &gt; 1\)</span>, <span
 class="math inline">\(\log \beta &gt; 0\)</span>.</p>
+<h2 id="ceilings">Ceilings</h2>
+<p>The arithmetic intensity of an operation is an intrisic property that
+represent the operation somewhere on the x-axis. The performance is a
+property of the implementation of this operation. Various
+implementations may have various performnace that lies on the line from
+the x-axis to the roofline.</p>
+<p>A suboptimal implementation may not fully utilize the peak memory
+bandwidth <span class="math inline">\(\beta\)</span>, resulting in an
+effective bandwidth <span class="math inline">\(\beta&#39;\)</span> that
+is less than <span class="math inline">\(\beta\)</span>. Since the
+bandwidth defines the intercept in the log-log plot, the diagonal line
+corresponding to <span class="math inline">\(\beta&#39; I\)</span> would
+have the same 45-degree slope but a lower intercept compared to <span
+class="math inline">\(\beta I\)</span>.</p>
+<p>Similarly, a lack of certain optimizations may prevent an application
+from fully utilizing the chip’s peak performance <span
+class="math inline">\(\pi\)</span>. In this case, the actual performance
+would be represented by a lower value, <span
+class="math inline">\(\pi&#39;\)</span>, which would appear as a
+horizontal line below the peak <span class="math inline">\(\pi\)</span>
+in the roofline plot.</p>
+<p>In the original paper about the Roofline analysis, these lower bounds
+are called ceilings.</p>
 <h2 id="performance-tuning">Performance Tuning</h2>
-<h3 id="use-lower-bits">Use Lower-bits</h3>
-<p>Inference in deep neural networks using <code>fp16</code> typically
-does not lead to a significant loss in precision compared to
-<code>fp32</code>. However, using <code>fp16</code> halves the number of
-bytes that need to be loaded and saved, effectively doubling the
-arithmetic intensity <span class="math inline">\(I\)</span>.</p>
+<p>In addition to optimizing the implementation, we sometimes change the
+operation in order to achive better performance.</p>
+<p>An example is to use Lower-bits. Inference in deep neural networks
+using <code>fp16</code> typically does not lead to a significant loss in
+precision compared to <code>fp32</code>. However, using
+<code>fp16</code> halves the number of bytes that need to be loaded and
+saved, effectively doubling the arithmetic intensity <span
+class="math inline">\(I\)</span>.</p>
 <p>Suppose that, prior to this doubling, <span
 class="math inline">\(I\)</span> lies below the diagonal line on the
 roofline model, meaning the application is constrained by memory
@@ -105,32 +156,78 @@ class="math inline">\(2I\)</span>, may make this new value lies below
 the horizontal line representing peak performance, the application can
 potentially shift from being memory-bound to achieving the chip’s peak
 performance.</p>
-<h3 id="operation-fusing">Operation Fusing</h3>
 <p>Another commonly used optimization is <strong>operation
 fusion</strong>, which reduces the number of loads and saves for
 intermediate results, often referred to as activations. This
 optimization also increases the arithmetic intensity <span
 class="math inline">\(I\)</span>, helping the application get closer to
 the peak performance.</p>
-<h3 id="suboptimal-memory-utilization">Suboptimal Memory
-Utilization</h3>
-<p>In some cases, an application may fail to fully utilize the available
-memory bandwidth <span class="math inline">\(\beta\)</span>, resulting
-in an effective bandwidth <span
-class="math inline">\(\beta&#39;\)</span> that is less than <span
-class="math inline">\(\beta\)</span>. Since the bandwidth defines the
-intercept in the log-log plot, the diagonal line corresponding to <span
-class="math inline">\(\beta&#39; I\)</span> would have the same
-45-degree slope but a lower intercept compared to <span
-class="math inline">\(\beta I\)</span>.</p>
-<p><img
-src="https://docs.nersc.gov/tools/performance/roofline/Roofline-hier.png" /></p>
-<h3 id="suboptimal-computational-utilization">Suboptimal Computational
-Utilization</h3>
-<p>Similarly, a lack of certain optimization skills may prevent an
-application from fully utilizing the chip’s peak performance <span
-class="math inline">\(\pi\)</span>. In this case, the actual performance
-would be represented by a lower value, <span
-class="math inline">\(\pi&#39;\)</span>, which would appear as a
-horizontal line below the peak <span class="math inline">\(\pi\)</span>
-in the roofline plot.</p>
+<h2 id="benchmarking-matmul">Benchmarking MatMul</h2>
+<p>The following program benchmarks the performance of MLX’s matmul
+given two square matrixes of width/height <span
+class="math inline">\(n\)</span>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>DT <span class="op">=</span> mx.float16</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>aint: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>perf: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">16</span>):</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> <span class="dv">2</span><span class="op">**</span>i</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(a)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(b)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    duration <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(R):</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        start_time <span class="op">=</span> time.perf_counter()</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        c <span class="op">=</span> a <span class="op">@</span> b</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        mx.<span class="bu">eval</span>(c)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        duration <span class="op">+=</span> time.perf_counter() <span class="op">-</span> start_time</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    aint.append(N <span class="op">/</span> <span class="fl">3.0</span>)  <span class="co"># 3.0 due to sizeof(bf16)</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    perf.append(N<span class="op">**</span><span class="dv">3</span> <span class="op">/</span> duration <span class="op">*</span> R <span class="op">*</span> <span class="dv">2</span>)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> a, b, c</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    gc.collect()</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>bandwidth <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">30</span> <span class="op">*</span> <span class="dv">800</span>  <span class="co"># https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">27.199</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>diag <span class="op">=</span> [bandwidth <span class="op">*</span> ai <span class="cf">for</span> ai <span class="kw">in</span> aint]</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> [roof <span class="cf">for</span> _ <span class="kw">in</span> aint]</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the log-log plot</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, perf, <span class="st">&quot;o&quot;</span>, markersize<span class="op">=</span><span class="dv">8</span>, label<span class="op">=</span><span class="st">&quot;matmul performance&quot;</span>)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, diag, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;memory access bound&quot;</span>)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, roof, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;computation bound&quot;</span>)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize the plot</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (f32-ops/byte)&quot;</span>)</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (f32-ops/sec)&quot;</span>)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&quot;Roofline analysis of matmul&quot;</span>)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">&quot;both&quot;</span>, ls<span class="op">=</span><span class="st">&quot;--&quot;</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<p>The matrix size <span class="math inline">\(n\)</span> goes from
+<span class="math inline">\(1\)</span> up to <span
+class="math inline">\(2^15\)</span>. The arithmatic intensity
+<code>aint.append(N / 3.0)</code> comes from the previous derivation.
+The performance, <span class="math inline">\(2N^3/d\)</span> FLOPS,
+where <span class="math inline">\(d\)</span> is the duration of each
+operation, is from the fact that during the period of execution, the
+chip runs <span class="math inline">\(n^3\)</span> elementwise
+multiplications and <span class="math inline">\(n^3\)</span>
+additions.</p>
