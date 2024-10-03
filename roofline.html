@@ -73,6 +73,9 @@ TFLOPS.</p>
 input matrices in a certain size <span
 class="math inline">\(n=2^i\)</span>. The larger the input matrices, the
 higher the arithmetic intensity of the operation.</p>
+<p>The following figure is for M1 Max, which has less peak performance
+and bandwidth than M2 Ultra.</p>
+<p><img src="roofline-m1-max.png" /></p>
 <p>From this figure, we see that when the matrix size is large enough,
 the performance of the matrix multiplication kernel for Apple silicon
 GPUs provided by MLX achieves about 90% of the theoretical peak
@@ -170,60 +173,79 @@ the peak performance.</p>
 given two square matrixes of width/height <span
 class="math inline">\(n\)</span>.</p>
 <div class="sourceCode" id="cb1"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> platform</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>DT <span class="op">=</span> mx.float16</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>aint: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>perf: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">16</span>):</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> <span class="dv">2</span><span class="op">**</span>i</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(a)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(b)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    duration <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_chip_model():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use &#39;sysctl&#39; to get information about the Apple Silicon chip</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        output <span class="op">=</span> (</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>            subprocess.check_output([<span class="st">&quot;sysctl&quot;</span>, <span class="st">&quot;-n&quot;</span>, <span class="st">&quot;machdep.cpu.brand_string&quot;</span>]).strip().decode()</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> output</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> subprocess.CalledProcessError <span class="im">as</span> e:</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Error retrieving chip model: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(R):</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        start_time <span class="op">=</span> time.perf_counter()</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        c <span class="op">=</span> a <span class="op">@</span> b</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        mx.<span class="bu">eval</span>(c)</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        duration <span class="op">+=</span> time.perf_counter() <span class="op">-</span> start_time</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    aint.append(N <span class="op">/</span> <span class="fl">3.0</span>)  <span class="co"># 3.0 due to sizeof(bf16)</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    perf.append(N<span class="op">**</span><span class="dv">3</span> <span class="op">/</span> duration <span class="op">*</span> R <span class="op">*</span> <span class="dv">2</span>)</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> a, b, c</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    gc.collect()</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>bandwidth <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">30</span> <span class="op">*</span> <span class="dv">800</span>  <span class="co"># https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">27.199</span></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>diag <span class="op">=</span> [bandwidth <span class="op">*</span> ai <span class="cf">for</span> ai <span class="kw">in</span> aint]</span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> [roof <span class="cf">for</span> _ <span class="kw">in</span> aint]</span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the log-log plot</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, perf, <span class="st">&quot;o&quot;</span>, markersize<span class="op">=</span><span class="dv">8</span>, label<span class="op">=</span><span class="st">&quot;matmul performance&quot;</span>)</span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, diag, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;memory access bound&quot;</span>)</span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, roof, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;computation bound&quot;</span>)</span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize the plot</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (f32-ops/byte)&quot;</span>)</span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (f32-ops/sec)&quot;</span>)</span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">&quot;Roofline analysis of matmul&quot;</span>)</span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">&quot;both&quot;</span>, ls<span class="op">=</span><span class="st">&quot;--&quot;</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>chip <span class="op">=</span> get_chip_model()</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>bandwidth <span class="op">=</span> {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M1 Max&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">30</span> <span class="op">*</span> <span class="dv">400</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M1#Memory</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M2 Ultra&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">30</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span> <span class="dv">800</span>,  <span class="co"># https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>}[chip]</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M1 Max&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">10.4</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M1#GPU</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M2 Ultra&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">27.2</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M2#GPU</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>}[chip]</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>DT <span class="op">=</span> mx.float16</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>aint: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>perf: List[<span class="bu">float</span>] <span class="op">=</span> []</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">16</span>):</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> <span class="dv">2</span><span class="op">**</span>i</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [N, N], dtype<span class="op">=</span>DT)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(a)</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(b)</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    duration <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(R):</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        start_time <span class="op">=</span> time.perf_counter()</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>        c <span class="op">=</span> a <span class="op">@</span> b</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        mx.<span class="bu">eval</span>(c)</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>        duration <span class="op">+=</span> time.perf_counter() <span class="op">-</span> start_time</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    aint.append(N <span class="op">/</span> <span class="fl">3.0</span>)  <span class="co"># 3.0 due to sizeof(fp16)</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    perf.append(N<span class="op">**</span><span class="dv">3</span> <span class="op">/</span> duration <span class="op">*</span> R <span class="op">*</span> <span class="dv">2</span>)</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">del</span> a, b, c</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    gc.collect()</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>diag <span class="op">=</span> [bandwidth <span class="op">*</span> ai <span class="cf">for</span> ai <span class="kw">in</span> aint]</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> [roof <span class="cf">for</span> _ <span class="kw">in</span> aint]</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, perf, <span class="st">&quot;o&quot;</span>, markersize<span class="op">=</span><span class="dv">8</span>, label<span class="op">=</span><span class="st">&quot;matmul performance&quot;</span>)</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, diag, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;memory access bound&quot;</span>)</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, roof, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;computation bound&quot;</span>)</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (f32-ops/byte)&quot;</span>)</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (f32-ops/sec)&quot;</span>)</span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="ss">f&quot;Roofline analysis of matmul on </span><span class="sc">{</span>chip<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">&quot;both&quot;</span>, ls<span class="op">=</span><span class="st">&quot;--&quot;</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p>The matrix size <span class="math inline">\(n\)</span> goes from
 <span class="math inline">\(1\)</span> up to <span
 class="math inline">\(2^15\)</span>. The arithmatic intensity
@@ -234,8 +256,6 @@ operation, is from the fact that during the period of execution, the
 chip runs <span class="math inline">\(n^3\)</span> elementwise
 multiplications and <span class="math inline">\(n^3\)</span>
 additions.</p>
-<p>Here is an improved version of the section to add at the end of your
-technical report:</p>
 <h2 id="next-steps">Next Steps</h2>
 <p>I welcome any feedback on this article. If you find it helpful, I am
 considering extending this work by benchmarking the MLX implementation
