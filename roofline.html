@@ -2,8 +2,7 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <h1 id="roofline-analysis-of-apple-silicon-gpus-using-mlx">Roofline
 Analysis of Apple Silicon GPUs using MLX</h1>
-<p>Yi Wang <a href="mailto:wyi@apple.com"
-class="email">wyi@apple.com</a></p>
+<p>Yi Wang &lt;yi.wang.2005 在 Google correo electrónico&gt;</p>
 <p>The concept of Roofline analysis was introduced in 2008 in <a
 href="https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf">this
 paper</a>, which focused on AMD Opteron CPUs. Later, NVIDIA incorporated
@@ -74,6 +73,10 @@ TFLOPS.</p>
 input matrices in a certain size <span
 class="math inline">\(n=2^i\)</span>. The larger the input matrices, the
 higher the arithmetic intensity of the operation.</p>
+<p>From this figure, we see that when the matrix size is large enough,
+the performance of the matrix multiplication kernel for Apple silicon
+GPUs provided by MLX achieves about 90% of the theoretical peak
+performance. This attests to the high code quality of MLX.</p>
 <h2 id="log-log-plot">Log-Log Plot</h2>
 <p>Modern chips can achieve <span class="math inline">\(\pi\)</span> in
 the teraflops range, which is so large that we typically use a log-scale
@@ -231,3 +234,13 @@ operation, is from the fact that during the period of execution, the
 chip runs <span class="math inline">\(n^3\)</span> elementwise
 multiplications and <span class="math inline">\(n^3\)</span>
 additions.</p>
+<p>Here is an improved version of the section to add at the end of your
+technical report:</p>
+<h2 id="next-steps">Next Steps</h2>
+<p>I welcome any feedback on this article. If you find it helpful, I am
+considering extending this work by benchmarking the MLX implementation
+of our invention, <a
+href="https://www.linkedin.com/posts/yidewang_ml-recurrent-drafterrecurrentdraftingmlx-activity-7247330410358050816-Klg-">Recurrent
+Drafting</a>. Recurrent Drafting is a state-of-the-art speculative
+decoding method that accelerates the inference of large language models
+(LLMs).</p>

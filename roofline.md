@@ -1,6 +1,6 @@
 # Roofline Analysis of Apple Silicon GPUs using MLX
 
-Yi Wang <wyi@apple.com>
+Yi Wang <yi.wang.2005 在 Google correo electrónico>
 
 The concept of Roofline analysis was introduced in 2008 in [this paper](https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf), which focused on AMD Opteron CPUs. Later, NVIDIA incorporated Roofline analysis into [Nsight](https://developer.nvidia.com/blog/accelerating-hpc-applications-with-nsight-compute-roofline-analysis/), its CUDA GPU profiling toolkit. The widespread adoption of CUDA GPUs in deep learning has further popularized the use of Roofline analysis. CUDA kernel developers use this method to gauge how close their code is to reaching the hardware’s theoretical performance limits. Numerous blog posts and YouTube videos have since explained Roofline analysis in detail. I've been exploring ways to explain this concept more concisely and illustrate its application on Apple silicon. Here's my attempt.
 
@@ -33,6 +33,8 @@ The following figure presents the analysis of MLX's matmul on M2 Ultra. The two 
 ![](roofline.png)
 
 Each dot corresponds to a matrix-multiplication operation that takes input matrices in a certain size $n=2^i$.  The larger the input matrices, the higher the arithmetic intensity of the operation.
+
+From this figure, we see that when the matrix size is large enough, the performance of the matrix multiplication kernel for Apple silicon GPUs provided by MLX achieves about 90% of the theoretical peak performance. This attests to the high code quality of MLX.
 
 ## Log-Log Plot
 
@@ -139,3 +141,8 @@ plt.show()
 
 The matrix size $n$ goes from $1$ up to $2^15$.  The arithmatic intensity `aint.append(N / 3.0)` comes from the previous derivation.  The performance, $2N^3/d$ FLOPS, where $d$ is the duration of each operation, is from the fact that during the period of execution, the chip runs $n^3$ elementwise multiplications and $n^3$ additions.
 
+Here is an improved version of the section to add at the end of your technical report:
+
+## Next Steps
+
+I welcome any feedback on this article. If you find it helpful, I am considering extending this work by benchmarking the MLX implementation of our invention, [Recurrent Drafting](https://www.linkedin.com/posts/yidewang_ml-recurrent-drafterrecurrentdraftingmlx-activity-7247330410358050816-Klg-). Recurrent Drafting is a state-of-the-art speculative decoding method that accelerates the inference of large language models (LLMs).
