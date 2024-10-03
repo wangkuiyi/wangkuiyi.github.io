@@ -141,8 +141,6 @@ plt.show()
 
 The matrix size $n$ goes from $1$ up to $2^15$.  The arithmatic intensity `aint.append(N / 3.0)` comes from the previous derivation.  The performance, $2N^3/d$ FLOPS, where $d$ is the duration of each operation, is from the fact that during the period of execution, the chip runs $n^3$ elementwise multiplications and $n^3$ additions.
 
-Here is an improved version of the section to add at the end of your technical report:
-
 ## Next Steps
 
 I welcome any feedback on this article. If you find it helpful, I am considering extending this work by benchmarking the MLX implementation of our invention, [Recurrent Drafting](https://www.linkedin.com/posts/yidewang_ml-recurrent-drafterrecurrentdraftingmlx-activity-7247330410358050816-Klg-). Recurrent Drafting is a state-of-the-art speculative decoding method that accelerates the inference of large language models (LLMs).
