@@ -30,7 +30,7 @@ In a simplified case where $A=B=C=n$, the arithmetic intensity is $n/3$.
 
 The following figure presents the analysis of MLX's matmul on M2 Ultra. The two straight lines are the thoretical bound of $\beta I$ and $\pi$, or, the Roofline model of M2 Ultra.  According to the [release note of M2 Ultra](https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra/), its peak memory bandwidth, $\beta$, is 800GB/s. According to [this Wikipedia entry](https://en.wikipedia.org/wiki/Apple_silicon#Comparison_of_M_series_processors), the peak performance, $\pi$, is 27.199 teraflops/sec, or TFLOPS.
 
-![](roofline.png)
+![](roofline-m2-ultra.png)
 
 Each dot corresponds to a matrix-multiplication operation that takes input matrices in a certain size $n=2^i$.  The larger the input matrices, the higher the arithmetic intensity of the operation.
 

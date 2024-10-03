@@ -68,7 +68,7 @@ href="https://en.wikipedia.org/wiki/Apple_silicon#Comparison_of_M_series_process
 Wikipedia entry</a>, the peak performance, <span
 class="math inline">\(\pi\)</span>, is 27.199 teraflops/sec, or
 TFLOPS.</p>
-<p><img src="roofline.png" /></p>
+<p><img src="roofline-m2-ultra.png" /></p>
 <p>Each dot corresponds to a matrix-multiplication operation that takes
 input matrices in a certain size <span
 class="math inline">\(n=2^i\)</span>. The larger the input matrices, the
@@ -239,8 +239,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, perf, <span class="st">&quot;o&quot;</span>, markersize<span class="op">=</span><span class="dv">8</span>, label<span class="op">=</span><span class="st">&quot;matmul performance&quot;</span>)</span>
 <span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, diag, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;memory access bound&quot;</span>)</span>
 <span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, roof, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;computation bound&quot;</span>)</span>
-<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (f32-ops/byte)&quot;</span>)</span>
-<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (f32-ops/sec)&quot;</span>)</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (flops/byte)&quot;</span>)</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (flops/sec)&quot;</span>)</span>
 <span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="ss">f&quot;Roofline analysis of matmul on </span><span class="sc">{</span>chip<span class="sc">}</span><span class="ss">&quot;</span>)</span>
 <span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
 <span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">&quot;both&quot;</span>, ls<span class="op">=</span><span class="st">&quot;--&quot;</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
