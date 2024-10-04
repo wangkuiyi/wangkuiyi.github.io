@@ -1,0 +1,197 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1
+id="roofline-analysis-of-performance-improvements-using-mlx.core.compile">Roofline
+Analysis of Performance Improvements Using
+<code>mlx.core.compile</code></h1>
+<p>In this analysis, we consider an example of a multi-layer perceptron
+(MLP). The MLP is defined as follows:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mlp(x: mx.array, M: mx.array, N: mx.array) <span class="op">-&gt;</span> mx.array:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mlx.nn.gelu(x <span class="op">@</span> M) <span class="op">@</span> N</span></code></pre></div>
+<p>Let:</p>
+<ul>
+<li><span class="math inline">\(B\)</span> be the batch size,</li>
+<li><span class="math inline">\(I\)</span> be the input dimension,
+and</li>
+<li><span class="math inline">\(H\)</span> be the intermediate
+dimension.</li>
+</ul>
+<p>The total number of floating-point operations (flops) required is the
+sum of the following:</p>
+<ol type="1">
+<li><code>x @ M</code>: <span class="math inline">\(2 B I H\)</span>
+flops.</li>
+<li><code>gelu(x @ M)</code>: <span class="math inline">\(12 B
+H\)</span> flops, as each of the <span class="math inline">\(BH\)</span>
+elements requires 12 flops according to the GeLU definition.</li>
+<li><code>gelu(x @ M) @ N</code>: <span class="math inline">\(2 B I
+H\)</span> flops.</li>
+</ol>
+<p>Assuming all tensors are in <code>fp16</code>, the total number of
+bytes being loaded and saved includes:</p>
+<ol type="1">
+<li>load <code>x</code>: <span class="math inline">\(2 B I\)</span>
+bytes</li>
+<li>load <code>M</code>: <span class="math inline">\(2 I H\)</span>
+bytes</li>
+<li>load <code>N</code>: <span class="math inline">\(2 I H\)</span>
+bytes</li>
+<li>save and load <code>x @ M</code> before calling <code>gelu</code>:
+<span class="math inline">\(4 B H\)</span> bytes</li>
+<li>save and load <code>gelu(x @ M)</code> before multiplying by
+<code>N</code>: <span class="math inline">\(4 B H\)</span> bytes</li>
+<li>save the result of <code>gelu(x @ M) @ N</code>: <span
+class="math inline">\(2 B I\)</span> bytes</li>
+</ol>
+<p>The arithmetic intensity in the non-fused case is given by:</p>
+<p><span class="math display">\[ \frac{4BIH + 12 BH}{4BI + 4IH + 8BH}
+\]</span></p>
+<p>If <code>mlx.core.compile</code> fuses the operations, avoiding the
+saving and loading of intermediate activations, the arithmetic intensity
+becomes:</p>
+<p><span class="math display">\[ \frac{4BIH + 12 BH}{4BI + 4IH}
+\]</span></p>
+<p>Below is a visualization showing how fusing the operations changes
+the performance.</p>
+<p><img src="fuse.png" /></p>
+<p>The following Python program computes and plots the Roofline analysis
+based on the above formulas.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> platform</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.nn</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>DT <span class="op">=</span> mx.float16</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="dv">16</span>  <span class="co"># a small batch size</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> <span class="dv">128</span>  <span class="co"># a large batch size</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>I <span class="op">=</span> <span class="dv">1024</span>  <span class="co"># input dimension. The intermediate dimension will be I*h for h in range(10)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mlp_nonfused(x: mx.array, l1: mx.array, l2: mx.array) <span class="op">-&gt;</span> mx.array:</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mlx.nn.gelu(x <span class="op">@</span> l1) <span class="op">@</span> l2</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>mlp_compiled <span class="op">=</span> mx.<span class="bu">compile</span>(mlp_nonfused)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> flops(B, I, H) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">4</span> <span class="op">*</span> B <span class="op">*</span> I <span class="op">*</span> H <span class="op">+</span> <span class="dv">12</span> <span class="op">*</span> B <span class="op">*</span> H</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ai_nonfused(B, I, H) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> flops(B, I, H) <span class="op">/</span> <span class="bu">float</span>(<span class="dv">4</span> <span class="op">*</span> B <span class="op">*</span> I <span class="op">+</span> <span class="dv">4</span> <span class="op">*</span> I <span class="op">*</span> H <span class="op">+</span> <span class="dv">8</span> <span class="op">*</span> B <span class="op">*</span> H)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ai_compiled(B, I, H) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> flops(B, I, H) <span class="op">/</span> <span class="bu">float</span>(<span class="dv">4</span> <span class="op">*</span> B <span class="op">*</span> I <span class="op">+</span> <span class="dv">4</span> <span class="op">*</span> I <span class="op">*</span> H)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>aint_small_batch_nonfused <span class="op">=</span> [ai_nonfused(b, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>aint_small_batch_compiled <span class="op">=</span> [ai_compiled(b, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>aint_large_batch_nonfused <span class="op">=</span> [ai_nonfused(B, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>aint_large_batch_compiled <span class="op">=</span> [ai_compiled(B, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> benchmark(fused: <span class="bu">bool</span>, B, I, H, R<span class="op">=</span><span class="dv">10</span>) <span class="op">-&gt;</span> Tuple[<span class="bu">float</span>, <span class="bu">float</span>]:</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [B, I], dtype<span class="op">=</span>DT)</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    M <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [I, H], dtype<span class="op">=</span>DT)</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    N <span class="op">=</span> mx.random.uniform(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, [H, I], dtype<span class="op">=</span>DT)</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(x)</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(M)</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    mx.<span class="bu">eval</span>(N)</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    start_time <span class="op">=</span> time.perf_counter()</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(R):</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> (mlp_compiled <span class="cf">if</span> fused <span class="cf">else</span> mlp_nonfused)(x, M, N)</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>        mx.<span class="bu">eval</span>(y)</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>    duration <span class="op">=</span> (time.perf_counter() <span class="op">-</span> start_time) <span class="op">/</span> R</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>    ops <span class="op">=</span> flops(B, I, H)</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;perf = </span><span class="sc">{</span>ops<span class="sc">}</span><span class="ss"> / </span><span class="sc">{</span>duration<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ops <span class="op">/</span> duration</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>perf_small_batch_nonfused <span class="op">=</span> [benchmark(<span class="va">False</span>, b, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>perf_small_batch_compiled <span class="op">=</span> [benchmark(<span class="va">True</span>, b, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>perf_large_batch_nonfused <span class="op">=</span> [benchmark(<span class="va">False</span>, B, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>perf_large_batch_compiled <span class="op">=</span> [benchmark(<span class="va">True</span>, B, I, I <span class="op">*</span> h) <span class="cf">for</span> h <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_chip_model():</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use &#39;sysctl&#39; to get information about the Apple Silicon chip</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>        output <span class="op">=</span> (</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>            subprocess.check_output([<span class="st">&quot;sysctl&quot;</span>, <span class="st">&quot;-n&quot;</span>, <span class="st">&quot;machdep.cpu.brand_string&quot;</span>]).strip().decode()</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> output</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> subprocess.CalledProcessError <span class="im">as</span> e:</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f&quot;Error retrieving chip model: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>chip <span class="op">=</span> get_chip_model()</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>bandwidth <span class="op">=</span> {</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M1 Max&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">30</span> <span class="op">*</span> <span class="dv">400</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M1#Memory</span></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M2 Ultra&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">30</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span> <span class="dv">800</span>,  <span class="co"># https://www.apple.com/newsroom/2023/06/apple-introduces-m2-ultra</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>}[chip]</span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> {</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M1 Max&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">10.4</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M1#GPU</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Apple M2 Ultra&quot;</span>: <span class="dv">2</span><span class="op">**</span><span class="dv">40</span> <span class="op">*</span> <span class="fl">27.2</span>,  <span class="co"># https://en.wikipedia.org/wiki/Apple_M2#GPU</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>}[chip]</span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>aint <span class="op">=</span> (</span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>    aint_small_batch_nonfused</span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> aint_small_batch_compiled</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> aint_large_batch_nonfused</span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> aint_large_batch_compiled</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>diag <span class="op">=</span> [bandwidth <span class="op">*</span> ai <span class="cf">for</span> ai <span class="kw">in</span> aint]</span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>roof <span class="op">=</span> [roof <span class="cf">for</span> _ <span class="kw">in</span> aint]</span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a>plt.loglog(</span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>    aint_small_batch_nonfused,</span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>    perf_small_batch_nonfused,</span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;o&quot;</span>,</span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a>    markersize<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">&quot;non-fused MLP performance (small batch size)&quot;</span>,</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a>plt.loglog(</span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a>    aint_small_batch_compiled,</span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a>    perf_small_batch_compiled,</span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;o&quot;</span>,</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a>    markersize<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">&quot;compiled MLP performance (small batch size)&quot;</span>,</span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>plt.loglog(</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>    aint_large_batch_nonfused,</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a>    perf_large_batch_nonfused,</span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;o&quot;</span>,</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a>    markersize<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">&quot;non-fused MLP performance (large batch size)&quot;</span>,</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>plt.loglog(</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a>    aint_large_batch_compiled,</span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>    perf_large_batch_compiled,</span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;o&quot;</span>,</span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>    markersize<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">&quot;compiled MLP performance (large batch size)&quot;</span>,</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, diag, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;memory access bound&quot;</span>)</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>plt.loglog(aint, roof, <span class="st">&quot;-&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="st">&quot;computation bound&quot;</span>)</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">&quot;arithmetic intensity (flops/byte)&quot;</span>)</span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">&quot;performance (flops/sec)&quot;</span>)</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="ss">f&quot;Roofline analysis of matmul on </span><span class="sc">{</span>chip<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a>plt.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">&quot;both&quot;</span>, ls<span class="op">=</span><span class="st">&quot;--&quot;</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>

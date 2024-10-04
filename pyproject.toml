@@ -9,4 +9,4 @@ warn_return_any = false
 # disallow_untyped_defs = true Enable it after we fix all the defs, or leave it here.
 
 [tool.black]
-line-length = 120
+line-length = 100
