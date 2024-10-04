@@ -12,7 +12,7 @@ import mlx.nn
 
 DT = mx.float16
 b = 16  # a small batch size
-B = 128  # a large batch size
+B = 1024  # a large batch size
 I = 1024  # input dimension. The intermediate dimension will be I*h for h in range(10)
 
 
