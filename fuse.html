@@ -4,26 +4,32 @@
 id="roofline-analysis-of-performance-improvements-using-mlx.core.compile">Roofline
 Analysis of Performance Improvements Using
 <code>mlx.core.compile</code></h1>
-<p>Let us consider MLP as an example.</p>
+<p>In this analysis, we consider an example of a multi-layer perceptron
+(MLP). The MLP is defined as follows:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mlp(x: mx.array, M: mx.array, N: mx.array) <span class="op">-&gt;</span> mx.array:</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mlx.nn.gelu(x <span class="op">@</span> M) <span class="op">@</span> N</span></code></pre></div>
-<p>Denote the batch size by <span class="math inline">\(B\)</span>, the
-input dimension by <span class="math inline">\(I\)</span>, and the
-intermediate dimension <span class="math inline">\(H\)</span>, the total
-number of flops is the sum of the following:</p>
+<p>Let:</p>
+<ul>
+<li><span class="math inline">\(B\)</span> be the batch size,</li>
+<li><span class="math inline">\(I\)</span> be the input dimension,
+and</li>
+<li><span class="math inline">\(H\)</span> be the intermediate
+dimension.</li>
+</ul>
+<p>The total number of floating-point operations (flops) required is the
+sum of the following:</p>
 <ol type="1">
-<li>compute <code>x @ M</code>: <span class="math inline">\(2 B I
+<li><code>x @ M</code>: <span class="math inline">\(2 B I H\)</span>
+flops.</li>
+<li><code>gelu(x @ M)</code>: <span class="math inline">\(12 B
+H\)</span> flops, as each of the <span class="math inline">\(BH\)</span>
+elements requires 12 flops according to the GeLU definition.</li>
+<li><code>gelu(x @ M) @ N</code>: <span class="math inline">\(2 B I
 H\)</span> flops.</li>
-<li>compute <code>gelu(x @ M)</code>: <span class="math inline">\(12 B
-H\)</span> flops, because for each of the <span
-class="math inline">\(BH\)</span> element, there are 12 flops, according
-to the definition of GeLU.</li>
-<li>compute <code>gelu(x @ M) @ N</code>: <span class="math inline">\(2
-B I H\)</span> flops.</li>
 </ol>
-<p>Consider all variables are in <code>fp16</code>. The total number of
-bytes being loaded and saved include:</p>
+<p>Assuming all tensors are in <code>fp16</code>, the total number of
+bytes being loaded and saved includes:</p>
 <ol type="1">
 <li>load <code>x</code>: <span class="math inline">\(2 B I\)</span>
 bytes</li>
@@ -31,24 +37,26 @@ bytes</li>
 bytes</li>
 <li>load <code>N</code>: <span class="math inline">\(2 I H\)</span>
 bytes</li>
-<li>save the result of <code>x @ M</code> and load it before calling
-<code>gelu</code>: <span class="math inline">\(4 B H\)</span> bytes</li>
-<li>save the result of <code>gelu(x @ M)</code> and load it before
-multiplying <code>N</code>: <span class="math inline">\(4 B H\)</span>
-bytes</li>
+<li>save and load <code>x @ M</code> before calling <code>gelu</code>:
+<span class="math inline">\(4 B H\)</span> bytes</li>
+<li>save and load <code>gelu(x @ M)</code> before multiplying by
+<code>N</code>: <span class="math inline">\(4 B H\)</span> bytes</li>
 <li>save the result of <code>gelu(x @ M) @ N</code>: <span
 class="math inline">\(2 B I\)</span> bytes</li>
 </ol>
-<p>Therefore, the arithmetic intensity is:</p>
+<p>The arithmetic intensity in the non-fused case is given by:</p>
 <p><span class="math display">\[ \frac{4BIH + 12 BH}{4BI + 4IH + 8BH}
 \]</span></p>
-<p>Suppose that <code>mlx.core.compile</code> fuses the operations and
-saves the savings and loadings of the activations. The arithmetic
-intensity is</p>
+<p>If <code>mlx.core.compile</code> fuses the operations, avoiding the
+saving and loading of intermediate activations, the arithmetic intensity
+becomes:</p>
 <p><span class="math display">\[ \frac{4BIH + 12 BH}{4BI + 4IH}
 \]</span></p>
+<p>Below is a visualization showing how fusing the operations changes
+the performance.</p>
 <p><img src="fuse.png" /></p>
-<p>Here follows the program that plots the above figure.</p>
+<p>The following Python program computes and plots the Roofline analysis
+based on the above formulas.</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gc</span>

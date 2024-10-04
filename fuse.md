@@ -1,38 +1,46 @@
 # Roofline Analysis of Performance Improvements Using `mlx.core.compile`
 
-Let us consider MLP as an example. 
+In this analysis, we consider an example of a multi-layer perceptron (MLP). The MLP is defined as follows:
 
 ```python
 def mlp(x: mx.array, M: mx.array, N: mx.array) -> mx.array:
     return mlx.nn.gelu(x @ M) @ N
 ```
 
-Denote the batch size by $B$, the input dimension by $I$, and the intermediate dimension $H$, the total number of flops is the sum of the following:
+Let:
 
-1. compute `x @ M`: $2 B I H$ flops.
-1. compute `gelu(x @ M)`: $12 B H$ flops, because for each of the $BH$ element, there are 12 flops, according to the definition of GeLU.
-1. compute `gelu(x @ M) @ N`: $2 B I H$ flops.
+- $B$ be the batch size,
+- $I$ be the input dimension, and
+- $H$ be the intermediate dimension.
 
-Consider all variables are in `fp16`. The total number of bytes being loaded and saved include:
+The total number of floating-point operations (flops) required is the sum of the following:
+
+1. `x @ M`: $2 B I H$ flops.
+1. `gelu(x @ M)`: $12 B H$ flops, as each of the $BH$ elements requires 12 flops according to the GeLU definition.
+1. `gelu(x @ M) @ N`: $2 B I H$ flops.
+
+Assuming all tensors are in `fp16`, the total number of bytes being loaded and saved includes:
 
 1. load `x`: $2 B I$ bytes
 1. load `M`: $2 I H$ bytes
 1. load `N`: $2 I H$ bytes
-1. save the result of `x @ M` and load it before calling `gelu`: $4 B H$ bytes
-1. save the result of `gelu(x @ M)` and load it before multiplying `N`: $4 B H$ bytes
+1. save and load `x @ M` before calling `gelu`: $4 B H$ bytes
+1. save and load `gelu(x @ M)` before multiplying by `N`: $4 B H$ bytes
 1. save the result of `gelu(x @ M) @ N`: $2 B I$ bytes
 
-Therefore, the arithmetic intensity is:
+The arithmetic intensity in the non-fused case is given by:
 
 $$ \frac{4BIH + 12 BH}{4BI + 4IH + 8BH} $$
 
-Suppose that `mlx.core.compile` fuses the operations, there would be no savings or loadings of the activations. The arithmetic intensity is now:
+If `mlx.core.compile` fuses the operations, avoiding the saving and loading of intermediate activations, the arithmetic intensity becomes:
 
 $$ \frac{4BIH + 12 BH}{4BI + 4IH} $$
 
+Below is a visualization showing how fusing the operations changes the performance.
+
 ![](fuse.png)
 
-Here follows the program that plots the above figure.
+The following Python program computes and plots the Roofline analysis based on the above formulas.
 
 ```python
 import numpy
