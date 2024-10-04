@@ -1,0 +1,50 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1
+id="roofline-analysis-of-operation-fusion-with-mlx.core.compile">Roofline
+Analysis of Operation Fusion with <code>mlx.core.compile</code></h1>
+<p>Let us consider MLP as an example.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mlp(x: mx.array, M: mx.array, N: mx.array) <span class="op">-&gt;</span> mx.array:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mlx.nn.gelu(x <span class="op">@</span> M) <span class="op">@</span> N</span></code></pre></div>
+<p>The following figure illustrates tensors and operations:</p>
+<p><img src="fuse.svg" /></p>
+<p>Denote the batch size by <span class="math inline">\(b\)</span>, the
+input dimension by $I, and the intermediate dimension <span
+class="math inline">\(H\)</span>, the total number of flops is the sum
+of the following:</p>
+<ol type="1">
+<li>compute <code>x@M</code>: <span class="math inline">\(2 b I
+H\)</span> flops.</li>
+<li>compute <code>gelu(x@M)</code>: <span class="math inline">\(12 b
+H\)</span> flops, because for each of the <span
+class="math inline">\(bH\)</span> element, there are 12 flops, according
+to the definition of GeLU.</li>
+<li>compute <code>gelu(x@M)@N</code>: <span class="math inline">\(2 b I
+H\)</span> flops.</li>
+</ol>
+<p>Consider all variables are in <code>fp16</code>. The total number of
+bytes being loaded and saved include:</p>
+<ol type="1">
+<li>load <code>x</code>: <span class="math inline">\(2 b I\)</span>
+bytes</li>
+<li>load <code>M</code>: <span class="math inline">\(2 I H\)</span>
+bytes</li>
+<li>load <code>N</code>: <span class="math inline">\(2 I H\)</span>
+bytes</li>
+<li>save and load the activation <code>x@M</code>: <span
+class="math inline">\(4 b H\)</span> bytes</li>
+<li>save and load the activation <code>gelu(x@M)</code>: <span
+class="math inline">\(4 b H\)</span> bytes</li>
+<li>save result <code>genlu(x@M)@N</code>: <span class="math inline">\(2
+b I\)</span> bytes</li>
+</ol>
+<p>Therefore, the arithmetic intensity is:</p>
+<p><span class="math display">\[ \frac{4bIH + 12 bH}{4bI + 4IH + 8bH}
+\]</span></p>
+<p>Suppose that <code>mlx.core.compile</code> fuses the operations and
+saves the savings and loadings of the activations. The arithmetic
+intensity is</p>
+<p><span class="math display">\[ \frac{4bIH + 12 bH}{4bI + 4IH}
+\]</span></p>
+<p><img src="fuse.png" /></p>

@@ -1,0 +1,12 @@
+digraph G {
+  rankdir=LR;
+  node [shape=plaintext];
+  
+  mm1 [label="@", shape=diamond];
+  mm2 [label="@", shape=diamond];
+  gelu [shape=diamond];
+  
+  x -> mm1;
+  M -> mm1 -> "x@M" -> gelu -> "gelu(x@M)" -> mm2;
+  N -> mm2 -> "gelu(x@M) @N";
+}
