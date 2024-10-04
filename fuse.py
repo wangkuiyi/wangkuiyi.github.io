@@ -130,7 +130,7 @@ plt.loglog(aint, diag, "-", linewidth=2, label="memory access bound")
 plt.loglog(aint, roof, "-", linewidth=2, label="computation bound")
 plt.xlabel("arithmetic intensity (flops/byte)")
 plt.ylabel("performance (flops/sec)")
-plt.title(f"Roofline analysis of matmul on {chip}")
+plt.title(f"Roofline analysis of MLP on {chip}")
 plt.legend()
 plt.grid(True, which="both", ls="--", linewidth=0.5)
 
