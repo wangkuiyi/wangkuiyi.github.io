@@ -1,5 +1,7 @@
 # Roofline Analysis of Performance Improvements Using `mlx.core.compile`
 
+Yi Wang <yi.wang.2005 在 Google correo electrónico>
+
 In this analysis, we consider an example of a multi-layer perceptron (MLP). The MLP is defined as follows:
 
 ```python
