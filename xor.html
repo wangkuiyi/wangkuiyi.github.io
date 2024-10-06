@@ -54,6 +54,7 @@ coordinates and colors:</p>
 <p>Try to imagine a line that separates these points by color—it’s
 impossible! No matter how you rotate the line, you can’t divide the
 points by their colors. This is a non-linearly separable problem.</p>
+<p><img src="xor/figures/1.svg" /></p>
 <h2 id="transforming-the-xor-problem-into-an-easier-form">Transforming
 the XOR Problem into an Easier Form</h2>
 <p>While imagining this, you may realize that if we could somehow
@@ -100,6 +101,7 @@ transformation:</p>
 progress! However, this setup still doesn’t linearly separate the
 points, as all of them are now on the same line. This is where
 activation functions come in to introduce non-linearity.</p>
+<p><img src="xor/figures/2.svg" /></p>
 <h2 id="why-we-need-activation-functions">Why We Need Activation
 Functions</h2>
 <p>Activation functions like logistic, tanh, and ReLU clamp negative
@@ -127,6 +129,7 @@ to:</p>
 <p><span class="math display">\[
 v_1 = -0.5, \quad v_2 = -1.5
 \]</span></p>
+<p><img src="xor/figures/3.svg" /></p>
 <h2 id="now-we-can-linearly-classify">Now, We Can Linearly
 Classify!</h2>
 <p>After the linear transformation and activation, the four points
@@ -155,8 +158,9 @@ line, we have the indicator</p>
 <p>To make the indictor more distinguishable, i.e., make positive values
 closer to 1 and negative values closer to 0, we can apply the activation
 function again:</p>
-<p><span class="math display">\[ s = \sigma(3 h_2 - h_1 + 0.003
+<p><span class="math display">\[ s = \sigma(3 h_2 - h_1 + 0.003)
 \]</span></p>
+<p><img src="xor/figures/4.svg" /></p>
 <h2 id="the-mlp-for-solving-xor">The MLP for Solving XOR</h2>
 <p>An MLP is defined by the following equations. Given a point <span
 class="math inline">\((x, y)\)</span>, the MLP computes:</p>

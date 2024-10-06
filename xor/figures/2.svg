@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="169 208 437 362" width="437" height="362">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="169 204 437 366" width="437" height="366">
   <defs>
     <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
       <g>
@@ -13,9 +13,9 @@
       </g>
     </marker>
   </defs>
-  <g id="Canvas_2" stroke="none" fill="none" fill-opacity="1" stroke-opacity="1" stroke-dasharray="none">
-    <title>Canvas 2</title>
-    <rect fill="white" x="169" y="208" width="437" height="362"/>
+  <g id="Canvas_2" fill-opacity="1" stroke-opacity="1" stroke="none" fill="none" stroke-dasharray="none">
+    <title>2</title>
+    <rect fill="white" x="169" y="204" width="437" height="366"/>
     <g id="Canvas_2_Layer_2">
       <title>Layer 2</title>
       <g id="Line_4">
@@ -44,7 +44,7 @@
         <circle cx="370" cy="370" r="36.0000575244682" fill="#c0c0ff"/>
       </g>
       <g id="Graphic_13">
-        <circle cx="527.91745" cy="279.9498" r="36.0000575244682" fill="#ffc0c0"/>
+        <circle cx="517.92135" cy="240.02734" r="36.0000575244683" fill="#ffc0c0"/>
       </g>
       <g id="Line_18">
         <path d="M 379.02466 481.7363 C 391.42824 474.95364 412.22656 460.14033 412.22656 437.0664 C 412.22656 428.5438 409.3891 419.93304 405.1852 411.85256" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
@@ -53,10 +53,13 @@
         <path d="M 244.3733 362.22554 C 252.87478 353.15363 269.91042 339.3789 294.97656 339.3789 C 304.109 339.3789 313.258 341.20735 321.8702 343.97063" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
       <g id="Line_20">
-        <line x1="378.68907" y1="365.0452" x2="480.21857" y2="307.1494" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+        <line x1="377.5124" y1="363.39917" x2="476.67886" y2="276.2655" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
       <g id="Line_21">
         <path d="M 229.83487 490.4848 C 213.39264 500.94056 178.37928 524.8295 172.70312 542 C 165.23994 564.57636 196.23966 571.1944 212.0039 564.9219 C 220.23395 561.64716 224.32516 549.5096 226.3559 538.6558" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+      </g>
+      <g id="Line_22">
+        <line x1="490.8554" y1="263.76602" x2="245.86553" y2="478.63855" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
       </g>
     </g>
     <g id="Canvas_2_Layer_1">

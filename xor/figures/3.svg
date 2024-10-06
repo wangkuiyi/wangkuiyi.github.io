@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="163 208 443 437" width="443" height="437">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" viewBox="169 200 437 493" width="437" height="493">
   <defs>
     <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
       <g>
@@ -17,11 +17,16 @@
         <path d="M 2.88 0 L 0 -1.08 L 0 1.08 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
       </g>
     </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_3" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="black">
+      <g>
+        <path d="M 3.2 0 L 0 -1.2 L 0 1.2 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
   </defs>
-  <g id="Canvas_3" stroke="none" fill="none" fill-opacity="1" stroke-opacity="1" stroke-dasharray="none">
-    <title>Canvas 3</title>
-    <rect fill="white" x="163" y="208" width="443" height="437"/>
-    <g id="Canvas_3_Layer_2">
+  <g id="Canvas_4" fill-opacity="1" stroke-opacity="1" stroke="none" fill="none" stroke-dasharray="none">
+    <title>3</title>
+    <rect fill="white" x="169" y="200" width="437" height="493"/>
+    <g id="Canvas_4_Layer_2">
       <title>Layer 2</title>
       <g id="Line_4">
         <line x1="238" y1="542" x2="239.93945" y2="224.89981" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
@@ -40,7 +45,7 @@
         </text>
       </g>
     </g>
-    <g id="Canvas_3_Layer_3">
+    <g id="Canvas_4_Layer_3">
       <title>Layer 3</title>
       <g id="Graphic_17">
         <circle cx="239" cy="484.75" r="36.0000575244683" fill="#ffc0c0"/>
@@ -49,7 +54,7 @@
         <circle cx="370" cy="370" r="36.0000575244682" fill="#c0c0ff"/>
       </g>
       <g id="Graphic_13">
-        <circle cx="527.91745" cy="279.9498" r="36.0000575244682" fill="#ffc0c0"/>
+        <circle cx="522.25093" cy="236.37166" r="36.0000575244683" fill="#ffc0c0"/>
       </g>
       <g id="Line_18">
         <path d="M 379.02466 481.7363 C 391.42824 474.95364 412.22656 460.14033 412.22656 437.0664 C 412.22656 428.5438 409.3891 419.93304 405.1852 411.85256" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
@@ -58,13 +63,13 @@
         <path d="M 244.3733 362.22554 C 252.87478 353.15363 269.91042 339.3789 294.97656 339.3789 C 304.109 339.3789 313.258 341.20735 321.8702 343.97063" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
       <g id="Line_20">
-        <line x1="378.68907" y1="365.0452" x2="480.21857" y2="307.1494" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+        <line x1="377.516" y1="363.4033" x2="480.9885" y2="272.5871" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
       <g id="Line_21">
         <path d="M 229.83487 490.4848 C 213.39264 500.94056 178.37928 524.8295 172.70312 542 C 165.23994 564.57636 196.23966 571.1944 212.0039 564.9219 C 220.23395 561.64716 224.32516 549.5096 226.3559 538.6558" marker-end="url(#Arrow_Marker)" stroke="#a5a5a5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
     </g>
-    <g id="Canvas_3_Layer_1">
+    <g id="Canvas_4_Layer_1">
       <title>Layer 1</title>
       <g id="Graphic_6">
         <circle cx="238.3472" cy="485.2326" r="10.000015979019" fill="red"/>
@@ -94,13 +99,30 @@
         </text>
       </g>
       <g id="Line_27">
-        <line x1="527.9375" y1="284.53516" x2="464.9967" y2="423.0616" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+        <line x1="511.1514" y1="270.62586" x2="465.74026" y2="410.7686" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
       </g>
-      <g id="Line_28">
-        <line x1="369.35547" y1="372.20312" x2="306.41468" y2="510.72955" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+      <g id="Line_30">
+        <path d="M 179 691 C 179 691 246.76867 680.2949 263.58203 622 C 274.28396 584.8945 261.13817 539.6141 250.16757 511.5989" marker-end="url(#FilledArrow_Marker_3)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
       </g>
-      <g id="Line_29">
-        <line x1="238" y1="484" x2="175.05921" y2="622.5264" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+      <g id="Line_31">
+        <line x1="300.5" y1="570" x2="298.75154" y2="513.63614" marker-end="url(#FilledArrow_Marker_3)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+      </g>
+      <g id="Graphic_32">
+        <circle cx="455.90625" cy="441.1172" r="10.000015979019" fill="red"/>
+        <circle cx="455.90625" cy="441.1172" r="10.000015979019" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_33">
+        <circle cx="297.85547" cy="484.75" r="10.0000159790189" fill="blue"/>
+        <circle cx="297.85547" cy="484.75" r="10.0000159790189" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_34">
+        <line x1="519.57415" y1="238.79472" x2="240" y2="484" stroke="#235e00" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_35">
+        <line x1="370.1025" y1="369.4492" x2="310.5086" y2="553.3612" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+      </g>
+      <g id="Line_36">
+        <line x1="238" y1="485.5" x2="178.40611" y2="669.412" marker-end="url(#FilledArrow_Marker_2)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
       </g>
     </g>
   </g>
