@@ -102,7 +102,7 @@ points, as all of them are now on the same line. This is where
 activation functions come in to introduce non-linearity.</p>
 <h2 id="why-we-need-activation-functions">Why We Need Activation
 Functions</h2>
-<p>Activation functions like softmax, tanh, and ReLU clamp negative
+<p>Activation functions like logistic, tanh, and ReLU clamp negative
 inputs to 0 (or a close value). The key idea is to “clamp” points in a
 way that separates them.</p>
 <p>Given the transformed points:</p>
@@ -140,14 +140,23 @@ transform as follows:</p>
 \]</span> <span class="math display">\[
 (1,1) \rightarrow \sigma(2 + v_1, 2 + v_2) = (1.5, 0.5)
 \]</span></p>
-<p>Now, you can easily draw a line separating the red points from the
-blue points:</p>
+<p>Denote a coordinate from the above transformation by <span
+class="math inline">\((h_1, h_2)\)</span>, we can easily draw a line
+separating the red points from the blue points:</p>
 <p><span class="math display">\[
-y = \frac{0.5}{1.5}x - 0.001 \approx \frac{1}{3}x - 0.001
+h_2 = \frac{0.5}{1.5} h_1 - 0.001 = \frac{1}{3} h_1 - 0.001
 \]</span></p>
 <p>The slope is derived from the third point, as the first two are on
 the x-axis. The intercept <span class="math inline">\(-0.001\)</span> is
 a small negative value to ensure proper separation.</p>
+<p>According to the rule of calcualting the distance from a point to a
+line, we have the indicator</p>
+<p><span class="math display">\[ s = 3 h_2 - h_1 + 0.003 \]</span></p>
+<p>To make the indictor more distinguishable, i.e., make positive values
+closer to 1 and negative values closer to 0, we can apply the activation
+function again:</p>
+<p><span class="math display">\[ s = \sigma(3 h_2 - h_1 + 0.003
+\]</span></p>
 <h2 id="the-mlp-for-solving-xor">The MLP for Solving XOR</h2>
 <p>An MLP is defined by the following equations. Given a point <span
 class="math inline">\((x, y)\)</span>, the MLP computes:</p>
@@ -161,7 +170,7 @@ h_2 = \sigma(w_{21}x + w_{22}y + b_2)
 <p>From the above derivation, we can estimate the parameters needed to
 solve the XOR classification:</p>
 <p><span class="math display">\[
-s = \sigma(3 h_1 + h_2 - 0.001)
+s = \sigma(- h_1 + 3 h_2 + 0.003)
 \]</span> <span class="math display">\[
 h_1 = \sigma(x + y - 0.5)
 \]</span> <span class="math display">\[
@@ -170,5 +179,13 @@ h_2 = \sigma(x + y - 1.5)
 <p>If <span class="math inline">\(s &gt; 0\)</span>, classify <span
 class="math inline">\((x, y)\)</span> as red; otherwise, classify it as
 blue.</p>
-<p>This concludes the mental exercise of manually solving the XOR
-problem using an MLP.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Here is the MLP we derived to solve the XOR problem as a mental
+exercise, relying purely on human reasoning. I hope this gives you an
+intuitive understanding of the key characteristics of activation
+functions: (1) clamping negative values, and (2) acting as an indicator
+for classification. These functions are crucial components of an
+MLP.</p>
+<p>There are many more activation functions beyond logistic, tanh, and
+ReLU. <a href="https://dublog.net/blog/all-the-activations/">This
+post</a> provides a comprehensive overview of them.</p>

@@ -74,7 +74,7 @@ Notice that the middle two blue points now coincide. This is progress! However, 
 
 ## Why We Need Activation Functions
 
-Activation functions like softmax, tanh, and ReLU clamp negative inputs to 0 (or a close value). The key idea is to “clamp” points in a way that separates them.
+Activation functions like logistic, tanh, and ReLU clamp negative inputs to 0 (or a close value). The key idea is to “clamp” points in a way that separates them.
 
 Given the transformed points:
 
@@ -107,13 +107,21 @@ $$
 (1,1) \rightarrow \sigma(2 + v_1, 2 + v_2) = (1.5, 0.5)
 $$
 
-Now, you can easily draw a line separating the red points from the blue points:
+Denote a coordinate from the above transformation by $(h_1, h_2)$, we can easily draw a line separating the red points from the blue points:
 
 $$
-y = \frac{0.5}{1.5}x - 0.001 \approx \frac{1}{3}x - 0.001
+h_2 = \frac{0.5}{1.5} h_1 - 0.001 = \frac{1}{3} h_1 - 0.001
 $$
 
 The slope is derived from the third point, as the first two are on the x-axis. The intercept $-0.001$ is a small negative value to ensure proper separation.
+
+According to the rule of calcualting the distance from a point to a line, we have the indicator
+
+$$ s = 3 h_2 - h_1 + 0.003 $$
+
+To make the indictor more distinguishable, i.e., make positive values closer to 1 and negative values closer to 0, we can apply the activation function again:
+
+$$ s = \sigma(3 h_2 - h_1 + 0.003 $$
 
 ## The MLP for Solving XOR
 
@@ -132,7 +140,7 @@ $$
 From the above derivation, we can estimate the parameters needed to solve the XOR classification:
 
 $$
-s = \sigma(- h_1 - 3 h_2 + 0.001)
+s = \sigma(- h_1 + 3 h_2 + 0.003)
 $$
 $$
 h_1 = \sigma(x + y - 0.5)
@@ -143,4 +151,8 @@ $$
 
 If $s > 0$, classify $(x, y)$ as red; otherwise, classify it as blue.
 
-This concludes the mental exercise of manually solving the XOR problem using an MLP.
+## Conclusion
+
+Here is the MLP we derived to solve the XOR problem as a mental exercise, relying purely on human reasoning. I hope this gives you an intuitive understanding of the key characteristics of activation functions: (1) clamping negative values, and (2) acting as an indicator for classification. These functions are crucial components of an MLP.
+
+There are many more activation functions beyond logistic, tanh, and ReLU. [This post](https://dublog.net/blog/all-the-activations/) provides a comprehensive overview of them.
