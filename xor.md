@@ -29,6 +29,8 @@ In the XOR challenge, there are four points with the following coordinates and c
 
 Try to imagine a line that separates these points by color—it’s impossible! No matter how you rotate the line, you can’t divide the points by their colors. This is a non-linearly separable problem.
 
+<img src="xor/figures/1.svg" />
+
 ## Transforming the XOR Problem into an Easier Form
 
 While imagining this, you may realize that if we could somehow transform the point (0,1) closer to (1,0), or move (1,1) near (0,0), the points would become linearly classifiable.
@@ -72,6 +74,8 @@ $$
 
 Notice that the middle two blue points now coincide. This is progress! However, this setup still doesn’t linearly separate the points, as all of them are now on the same line. This is where activation functions come in to introduce non-linearity.
 
+<img src="xor/figures/2.svg" />
+
 ## Why We Need Activation Functions
 
 Activation functions like logistic, tanh, and ReLU clamp negative inputs to 0 (or a close value). The key idea is to “clamp” points in a way that separates them.
@@ -89,6 +93,8 @@ Let’s start with $v_1 = v_2$. Unfortunately, this keeps the points on a line p
 $$
 v_1 = -0.5, \quad v_2 = -1.5
 $$
+
+<img src="xor/figures/3.svg" />
 
 ## Now, We Can Linearly Classify!
 
@@ -121,7 +127,9 @@ $$ s = 3 h_2 - h_1 + 0.003 $$
 
 To make the indictor more distinguishable, i.e., make positive values closer to 1 and negative values closer to 0, we can apply the activation function again:
 
-$$ s = \sigma(3 h_2 - h_1 + 0.003 $$
+$$ s = \sigma(3 h_2 - h_1 + 0.003) $$
+
+<img src="xor/figures/4.svg" />
 
 ## The MLP for Solving XOR
 
