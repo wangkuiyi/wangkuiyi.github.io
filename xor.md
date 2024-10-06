@@ -1,116 +1,146 @@
-# Train An MLP Using Your Brain Rather Than GPU to Address the XOR Classification Challenge
+# Train an MLP Using Your Brain Rather Than a GPU to Address the XOR Classification Challenge
 
-This is a great mental exercise to understand why do we need activation functions.
+This exercise is a great way to understand why activation functions are essential in neural networks.
 
-Being asked this quesiton in a job interview, you are supposed to give an example classification challenge, which
+Imagine being asked about this in a job interview. You're expected to provide an example of a classification problem that:
 
-1. is not linearly classifiable,
-1. can be solved by an multilayer perceptron,
-1. with an activation function.
+1. Cannot be solved using a linear classifier,
+2. Can be addressed using a multilayer perceptron (MLP),
+3. Requires an activation function.
 
-A well-known example is the XOR challenge. Surprisingly, when I Googled about it, some results [1](https://dev.to/jbahire/demystifying-the-xor-problem-1blk) [2](https://priyansh-kedia.medium.com/solving-the-xor-problem-using-mlp-83e35a22c96f) [3](https://dataqoil.com/2022/06/24/multilayer-percepron-using-xor-function-from/) claim that backpropagation algorithm could estimate the parameters of MLP that can solve the challenge, but didn't give the estimated parameters. Some [4](https://stackoverflow.com/questions/37734655/neural-network-solving-xor) suggests that we need to build an MLP to mimic the logical equation `x1 XOR x2 == NOT (x1 AND x2) AND (x1 OR x2)`, but didn't explain how. A few of them present wrong example parameters. This inspired my attempt to address this.
+A classic example is the XOR challenge. Surprisingly, when searching for solutions online, several sources [1](https://dev.to/jbahire/demystifying-the-xor-problem-1blk) [2](https://priyansh-kedia.medium.com/solving-the-xor-problem-using-mlp-83e35a22c96f) [3](https://dataqoil.com/2022/06/24/multilayer-percepron-using-xor-function-from/) claim that the backpropagation algorithm can estimate the parameters of an MLP that solves the challenge but fail to provide the estimated parameters. Others [4](https://stackoverflow.com/questions/37734655/neural-network-solving-xor) suggest that an MLP should mimic the logical equation `x1 XOR x2 == NOT (x1 AND x2) AND (x1 OR x2)`, but they do not explain how. A few even present incorrect parameters. This inspired me to attempt solving the XOR challenge manually.
 
-## What is Linearly Classifiable
+## What Does It Mean to Be Linearly Classifiable?
 
-Consider some points on the 2D plane. Each point is in either of two colors, say, blue and red.  The definitons is something like -- if we could draw a straightline to make sure that red points are on one side of the line and blue points are on the other side, we say these colored points are linearly classifiable.
+Consider some points on a 2D plane, each colored either blue or red. The points are linearly classifiable if you can draw a straight line such that all red points lie on one side and all blue points on the other.
 
-For programmers, a definition makes sense only if it is computable.  The above definition makes sense because the linear regression model, when estimated using the error backpropagation algorithm given the coordinate and color of each and every point, tells where the line lies.
+For programmers, this definition makes sense because it’s computable. Given the coordinates and colors of points, a linear regression model estimated using error backpropagation can determine where this line should be.
 
-Consider that all red points have their y coordinate larger than 10, and blue points all have y less than 10, then the line $y=10$ is a perfect line to separate them by color.
+For example, if all red points have a y-coordinate greater than 10, and all blue points have y-values less than 10, the line $y = 10$ perfectly separates them by color.
 
-## XOR Challenge is Not Linearly Classifiable
+## The XOR Challenge: Not Linearly Classifiable
 
-In the XOR challenge, there are four points, whose coordinates and colors are as follows:
+In the XOR challenge, there are four points with the following coordinates and colors:
 
 - (0,0) - red
 - (0,1) - blue
 - (1,0) - blue
 - (1,1) - red
 
-It is not too hard to excersise your brain to imagine a line on the 2D plane that goes across any place. However, you rotate the line, there is no way to separate the four points by their colors.
+Try to imagine a line that separates these points by color—it’s impossible! No matter how you rotate the line, you can’t divide the points by their colors. This is a non-linearly separable problem.
 
-## Transforming XOR into a Easier Form
+## Transforming the XOR Problem into an Easier Form
 
-With the above imagination exercise, it also not hard to realize that if we could transform the point (0,1) to where at or close to (1,0), we could draw a line to classify. Or, alternatively, if we transform (1,1) to be close to (0,0).
+While imagining this, you may realize that if we could somehow transform the point (0,1) closer to (1,0), or move (1,1) near (0,0), the points would become linearly classifiable.
 
-A very simple form of transformation is linear transformation, which is defind by a matrix $W$ and the corresponding bias vector $v$ 
+One straightforward way to achieve this is through a linear transformation, defined by a matrix $W$ and a bias vector $v$:
 
-$$W=[[w_{11}, w_{12}], [w_{21}, w_{22}]]$$
-$$v=[v_1, v_2]^T$$
+$$
+W = \begin{bmatrix} w_{11} & w_{12} \\ w_{21} & w_{22} \end{bmatrix}, \quad v = \begin{bmatrix} v_1 \\ v_2 \end{bmatrix}
+$$
 
-Transforming the point $(x,y)$ moves it to the new coordinate:
+Applying this transformation to a point $(x, y)$ gives the new coordinates:
 
-$$ (x,y) \rightarrow ( w_{11}x + w_{12} y + v_1, w_{12} x + w_{22} y + v_2) $$
+$$
+(x, y) \rightarrow (w_{11}x + w_{12}y + v_1, w_{21}x + w_{22}y + v_2)
+$$
 
-As we want to guess these parameters without running the backpropagation algorithm, it is always good to start with simple guesses.
+We aim to estimate these parameters without backpropagation, starting with simple guesses.
 
-Let us begin with that both $W$ and $b$ are zeros. This would fuse all points to $(0,0)$ and thus make them completely inclassifiable.
+Let’s begin with both $W$ and $v$ set to zero. This would fuse all points to $(0,0)$, which doesn’t help. If $W$ is diagonally identical and $v$ is zero, no point moves, so the problem remains unsolved.
 
-If $W$ is diagonally identical and $b$ is zero, the transformation wouldn't move any point, thus it does not ease the challenge.
+Now, let’s assume that all entries in $W$ are ones. This gives the transformation:
 
-Then let us guess that $W$ contains all 1's.  In this case, the transformation results would be:
+$$
+(x, y) \rightarrow (x + y + v_1, x + y + v_2)
+$$
 
-$$ (x,y) \rightarrow ( x + y + v_1, x + y + v_2) $$
+For the XOR challenge, this transformation produces:
 
-Or, for the XOR challenge:
+$$
+(0,0) \rightarrow (v_1, v_2)
+$$
+$$
+(0,1) \rightarrow (1 + v_1, 1 + v_2)
+$$
+$$
+(1,0) \rightarrow (1 + v_1, 1 + v_2)
+$$
+$$
+(1,1) \rightarrow (2 + v_1, 2 + v_2)
+$$
 
-$$ (0,0) \rightarrow ( v_1, v_2) $$
-$$ (0,1) \rightarrow ( 1 + v_1, 1 + v_2) $$
-$$ (1,0) \rightarrow ( 1 + v_1, 1 + v_2) $$
-$$ (1,1) \rightarrow ( 2 + v_1, 2 + v_2) $$
+Notice that the middle two blue points now coincide. This is progress! However, this setup still doesn’t linearly separate the points, as all of them are now on the same line. This is where activation functions come in to introduce non-linearity.
 
-The middle two points (both blue colored) are now at the same coordinate. This is a good sign! 
+## Why We Need Activation Functions
 
-However, this is not good enough. Because $(v_1,v_2)$ is like moving from $(0,0)$ for an offset $(v_1, v_2)$, and similarly, the rest points are moving from $(1,1)$ and $(2,2)$ for the same offset. This would make all new points on the same line and the blue ones are in between the two red ones. This setup is not linearly classifiable.
+Activation functions like softmax, tanh, and ReLU clamp negative inputs to 0 (or a close value). The key idea is to “clamp” points in a way that separates them.
 
-Here is where we need activation functions, or, the non-linearity, to move these points away from the line on which they are.
+Given the transformed points:
 
-## We Need Activation Functions
+$$
+(v_1, v_2), \quad (1 + v_1, 1 + v_2), \quad (2 + v_1, 2 + v_2)
+$$
 
-Some well-known activation functions include softmax, tanh, and ReLU. All of them clamp negative inputs to 0 or a close-to-0 value. The keyword here is "clamp"!
+We can choose $v_1$ and $v_2$ such that the activation function clamps one point entirely, partially clamps another, and leaves the third unchanged, thus breaking their alignment on the same line.
 
-Given the three coordinates after the above linear transformation:
+Let’s start with $v_1 = v_2$. Unfortunately, this keeps the points on a line parallel to $y = x$. To achieve our goal, $v_1$ and $v_2$ must be negative but different. If the absolute values of $v_1$ and $v_2$ are less than 2, the third point remains unclamped, while the first point gets clamped to $(0,0)$. We aim for one coordinate of the second point to be clamped while the other remains positive, which leads to:
 
-$$ ( v_1, v_2) $$
-$$ ( 1 + v_1, 1 + v_2) $$
-$$ ( 2 + v_1, 2 + v_2) $$
+$$
+v_1 = -0.5, \quad v_2 = -1.5
+$$
 
-If by carefully choosing the values of $v_1$ and $v_2$, we can make the activation function clamp both coordinates of a point, one coordinates of another, and no coordinates of the third, then we should be able to move the three points away from the line that they share.
+## Now, We Can Linearly Classify!
 
-The simplest guess is $v_1=v_2$. Unfortunately, that would keep the three points on the line $y=x$ or some line that in parallel, denoted by $y=x+\xi$.
+After the linear transformation and activation, the four points transform as follows:
 
-As long as both $v_1$ and $v_2$ are negative, the first point would be clamped back to $(0,0)$. It is then the "a point" as mentioned above. If the absolute values of $v_1$ and $v_2$ are less than 2, the point $(2+v_1,2+v_2)$ wouldn't be clamped, so it would be the third point as mentioned above. Now, given the two coordinate values of the point $(1+v_1,1+v_2)$, we want one of them negative and the other one positive. To do so, we could have
+$$
+(0,0) \rightarrow \sigma(v_1, v_2) = (0,0)
+$$
+$$
+(0,1) \rightarrow \sigma(1 + v_1, 1 + v_2) = (0.5, 0)
+$$
+$$
+(1,0) \rightarrow \sigma(1 + v_1, 1 + v_2) = (0.5, 0)
+$$
+$$
+(1,1) \rightarrow \sigma(2 + v_1, 2 + v_2) = (1.5, 0.5)
+$$
 
-$$ v_1 = -0.5 $$
-$$ v_2 = -1.5 $$
+Now, you can easily draw a line separating the red points from the blue points:
 
-## Now, Linear Classify!
+$$
+y = \frac{0.5}{1.5}x - 0.001 \approx \frac{1}{3}x - 0.001
+$$
 
-The above linear transformation and activation moves the original four points as follows:
+The slope is derived from the third point, as the first two are on the x-axis. The intercept $-0.001$ is a small negative value to ensure proper separation.
 
-$$ (0,0) \rightarrow \sigma( v_1, v_2) \rightarrow (0, 0) $$
-$$ (0,1) \rightarrow \sigma( 1 + v_1, 1 + v_2) \rightarrow (0.5, 0) $$
-$$ (1,0) \rightarrow \sigma( 1 + v_1, 1 + v_2) \rightarrow (0.5, 0) $$
-$$ (1,1) \rightarrow \sigma( 2 + v_1, 2 + v_2) \rightarrow (1.5, 0.5) $$
+## The MLP for Solving XOR
 
-It is not too hard to tell that the following line could separate the red points from the blue ones:
+An MLP is defined by the following equations. Given a point $(x, y)$, the MLP computes:
 
-$$ y = \frac{0.5}{1.5} x - 0.001 = \frac{1}{3}x - 0.001 $$
+$$
+s = \sigma(v_1 h_1 + v_2 h_2 + c)
+$$
+$$
+h_1 = \sigma(w_{11}x + w_{12}y + b_1)
+$$
+$$
+h_2 = \sigma(w_{21}x + w_{22}y + b_2)
+$$
 
-where the slope is derived from the third coordinate because the first two are on x-axis now. The intercept $-0.001$ is an arbitrary small enough negative value.
+From the above derivation, we can estimate the parameters needed to solve the XOR classification:
 
-## The MLP for the XOR Classification
+$$
+s = \sigma(- h_1 - 3 h_2 + 0.001)
+$$
+$$
+h_1 = \sigma(x + y - 0.5)
+$$
+$$
+h_2 = \sigma(x + y - 1.5)
+$$
 
-A MLP is defined as folows. Given a point at coordinate $(x,y)$, the MLP runs the following equation:
+If $s > 0$, classify $(x, y)$ as red; otherwise, classify it as blue.
 
-$$ s = \sigma( v_1 h_1 + v_2 h_2 + c) $$
-$$ h_1 = \sigma( w_{11} x + w_{12} y + b_1 ) $$
-$$ h_2 = \sigma( w_{21} x + w_{22} y + b_2) $$
-
-The above derivation gave us an estimation of the parameters that can solve the XOR classification challenge:
-
-$$ s = \sigma( 3 h_1 +  h_2 - 0.001 ) $$
-$$ h_1 = \sigma( x + y - 0.5 ) $$
-$$ h_2 = \sigma( x + y - 1.5 ) $$
-
-If $s>0$, the point $(x,y)$ is red; otherwise, it is blue.
+This concludes the mental exercise of manually solving the XOR problem using an MLP.

@@ -1,171 +1,174 @@
 <link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <h1
-id="train-an-mlp-using-your-brain-rather-than-gpu-to-address-the-xor-classification-challenge">Train
-An MLP Using Your Brain Rather Than GPU to Address the XOR
+id="train-an-mlp-using-your-brain-rather-than-a-gpu-to-address-the-xor-classification-challenge">Train
+an MLP Using Your Brain Rather Than a GPU to Address the XOR
 Classification Challenge</h1>
-<p>One of the most fundamental question in deep learning is why do we
-need activation functions.</p>
-<p>Being asked this quesiton in a job interview, you are supposed to
-give an example classification challenge, which</p>
+<p>This exercise is a great way to understand why activation functions
+are essential in neural networks.</p>
+<p>Imagine being asked about this in a job interview. You’re expected to
+provide an example of a classification problem that:</p>
 <ol type="1">
-<li>is not linearly classifiable,</li>
-<li>can be solved by an multilayer perceptron,</li>
-<li>with an activation function.</li>
+<li>Cannot be solved using a linear classifier,</li>
+<li>Can be addressed using a multilayer perceptron (MLP),</li>
+<li>Requires an activation function.</li>
 </ol>
-<p>A well-known example is the XOR challenge. Surprisingly, when I
-Googled about it, some results <a
+<p>A classic example is the XOR challenge. Surprisingly, when searching
+for solutions online, several sources <a
 href="https://dev.to/jbahire/demystifying-the-xor-problem-1blk">1</a> <a
 href="https://priyansh-kedia.medium.com/solving-the-xor-problem-using-mlp-83e35a22c96f">2</a>
 <a
 href="https://dataqoil.com/2022/06/24/multilayer-percepron-using-xor-function-from/">3</a>
-claim that backpropagation algorithm could estimate the parameters of
-MLP that can solve the challenge, but didn’t give the estimated
-parameters. Some <a
+claim that the backpropagation algorithm can estimate the parameters of
+an MLP that solves the challenge but fail to provide the estimated
+parameters. Others <a
 href="https://stackoverflow.com/questions/37734655/neural-network-solving-xor">4</a>
-suggests that we need to build an MLP to mimic the logical equation
-<code>x1 XOR x2 == NOT (x1 AND x2) AND (x1 OR x2)</code>, but didn’t
-explain how. A few of them present wrong example parameters. This
-inspired my attempt to address this.</p>
-<h2 id="what-is-linearly-classifiable">What is Linearly
-Classifiable</h2>
-<p>Consider some points on the 2D plane. Each point is in either of two
-colors, say, blue and red. The definitons is something like – if we
-could draw a straightline to make sure that red points are on one side
-of the line and blue points are on the other side, we say these colored
-points are linearly classifiable.</p>
-<p>For programmers, a definition makes sense only if it is computable.
-The above definition makes sense because the linear regression model,
-when estimated using the error backpropagation algorithm given the
-coordinate and color of each and every point, tells where the line
-lies.</p>
-<p>Consider that all red points have their y coordinate larger than 10,
-and blue points all have y less than 10, then the line <span
-class="math inline">\(y=10\)</span> is a perfect line to separate them
-by color.</p>
-<h2 id="xor-challenge-is-not-linearly-classifiable">XOR Challenge is Not
-Linearly Classifiable</h2>
-<p>In the XOR challenge, there are four points, whose coordinates and
-colors are as follows:</p>
+suggest that an MLP should mimic the logical equation
+<code>x1 XOR x2 == NOT (x1 AND x2) AND (x1 OR x2)</code>, but they do
+not explain how. A few even present incorrect parameters. This inspired
+me to attempt solving the XOR challenge manually.</p>
+<h2 id="what-does-it-mean-to-be-linearly-classifiable">What Does It Mean
+to Be Linearly Classifiable?</h2>
+<p>Consider some points on a 2D plane, each colored either blue or red.
+The points are linearly classifiable if you can draw a straight line
+such that all red points lie on one side and all blue points on the
+other.</p>
+<p>For programmers, this definition makes sense because it’s computable.
+Given the coordinates and colors of points, a linear regression model
+estimated using error backpropagation can determine where this line
+should be.</p>
+<p>For example, if all red points have a y-coordinate greater than 10,
+and all blue points have y-values less than 10, the line <span
+class="math inline">\(y = 10\)</span> perfectly separates them by
+color.</p>
+<h2 id="the-xor-challenge-not-linearly-classifiable">The XOR Challenge:
+Not Linearly Classifiable</h2>
+<p>In the XOR challenge, there are four points with the following
+coordinates and colors:</p>
 <ul>
 <li>(0,0) - red</li>
 <li>(0,1) - blue</li>
 <li>(1,0) - blue</li>
 <li>(1,1) - red</li>
 </ul>
-<p>It is not too hard to excersise your brain to imagine a line on the
-2D plane that goes across any place. However, you rotate the line, there
-is no way to separate the four points by their colors.</p>
-<h2 id="transforming-xor-into-a-easier-form">Transforming XOR into a
-Easier Form</h2>
-<p>With the above imagination exercise, it also not hard to realize that
-if we could transform the point (0,1) to where at or close to (1,0), we
-could draw a line to classify. Or, alternatively, if we transform (1,1)
-to be close to (0,0).</p>
-<p>A very simple form of transformation is linear transformation, which
-is defind by a matrix <span class="math inline">\(W\)</span> and the
-corresponding bias vector <span class="math inline">\(v\)</span></p>
-<p><span class="math display">\[W=[[w_{11}, w_{12}], [w_{21},
-w_{22}]]\]</span> <span class="math display">\[v=[v_1,
-v_2]^T\]</span></p>
-<p>Transforming the point <span class="math inline">\((x,y)\)</span>
-moves it to the new coordinate:</p>
-<p><span class="math display">\[ (x,y) \rightarrow ( w_{11}x + w_{12} y
-+ v_1, w_{12} x + w_{22} y + v_2) \]</span></p>
-<p>As we want to guess these parameters without running the
-backpropagation algorithm, it is always good to start with simple
-guesses.</p>
-<p>Let us begin with that both <span class="math inline">\(W\)</span>
-and <span class="math inline">\(b\)</span> are zeros. This would fuse
-all points to <span class="math inline">\((0,0)\)</span> and thus make
-them completely inclassifiable.</p>
-<p>If <span class="math inline">\(W\)</span> is diagonally identical and
-<span class="math inline">\(b\)</span> is zero, the transformation
-wouldn’t move any point, thus it does not ease the challenge.</p>
-<p>Then let us guess that <span class="math inline">\(W\)</span>
-contains all 1’s. In this case, the transformation results would be:</p>
-<p><span class="math display">\[ (x,y) \rightarrow ( x + y + v_1, x + y
-+ v_2) \]</span></p>
-<p>Or, for the XOR challenge:</p>
-<p><span class="math display">\[ (0,0) \rightarrow ( v_1, v_2) \]</span>
-<span class="math display">\[ (0,1) \rightarrow ( 1 + v_1, 1 + v_2)
-\]</span> <span class="math display">\[ (1,0) \rightarrow ( 1 + v_1, 1 +
-v_2) \]</span> <span class="math display">\[ (1,1) \rightarrow ( 2 +
-v_1, 2 + v_2) \]</span></p>
-<p>The middle two points (both blue colored) are now at the same
-coordinate. This is a good sign!</p>
-<p>However, this is not good enough. Because <span
-class="math inline">\((v_1,v_2)\)</span> is like moving from <span
-class="math inline">\((0,0)\)</span> for an offset <span
-class="math inline">\((v_1, v_2)\)</span>, and similarly, the rest
-points are moving from <span class="math inline">\((1,1)\)</span> and
-<span class="math inline">\((2,2)\)</span> for the same offset. This
-would make all new points on the same line and the blue ones are in
-between the two red ones. This setup is not linearly classifiable.</p>
-<p>Here is where we need activation functions, or, the non-linearity, to
-move these points away from the line on which they are.</p>
-<h2 id="we-need-activation-functions">We Need Activation Functions</h2>
-<p>Some well-known activation functions include softmax, tanh, and ReLU.
-All of them clamp negative inputs to 0 or a close-to-0 value. The
-keyword here is “clamp”!</p>
-<p>Given the three coordinates after the above linear
+<p>Try to imagine a line that separates these points by color—it’s
+impossible! No matter how you rotate the line, you can’t divide the
+points by their colors. This is a non-linearly separable problem.</p>
+<h2 id="transforming-the-xor-problem-into-an-easier-form">Transforming
+the XOR Problem into an Easier Form</h2>
+<p>While imagining this, you may realize that if we could somehow
+transform the point (0,1) closer to (1,0), or move (1,1) near (0,0), the
+points would become linearly classifiable.</p>
+<p>One straightforward way to achieve this is through a linear
+transformation, defined by a matrix <span
+class="math inline">\(W\)</span> and a bias vector <span
+class="math inline">\(v\)</span>:</p>
+<p><span class="math display">\[
+W = \begin{bmatrix} w_{11} &amp; w_{12} \\ w_{21} &amp; w_{22}
+\end{bmatrix}, \quad v = \begin{bmatrix} v_1 \\ v_2 \end{bmatrix}
+\]</span></p>
+<p>Applying this transformation to a point <span
+class="math inline">\((x, y)\)</span> gives the new coordinates:</p>
+<p><span class="math display">\[
+(x, y) \rightarrow (w_{11}x + w_{12}y + v_1, w_{21}x + w_{22}y + v_2)
+\]</span></p>
+<p>We aim to estimate these parameters without backpropagation, starting
+with simple guesses.</p>
+<p>Let’s begin with both <span class="math inline">\(W\)</span> and
+<span class="math inline">\(v\)</span> set to zero. This would fuse all
+points to <span class="math inline">\((0,0)\)</span>, which doesn’t
+help. If <span class="math inline">\(W\)</span> is diagonally identical
+and <span class="math inline">\(v\)</span> is zero, no point moves, so
+the problem remains unsolved.</p>
+<p>Now, let’s assume that all entries in <span
+class="math inline">\(W\)</span> are ones. This gives the
 transformation:</p>
-<p><span class="math display">\[ ( v_1, v_2) \]</span> <span
-class="math display">\[ ( 1 + v_1, 1 + v_2) \]</span> <span
-class="math display">\[ ( 2 + v_1, 2 + v_2) \]</span></p>
-<p>If by carefully choosing the values of <span
-class="math inline">\(v_1\)</span> and <span
-class="math inline">\(v_2\)</span>, we can make the activation function
-clamp both coordinates of a point, one coordinates of another, and no
-coordinates of the third, then we should be able to move the three
-points away from the line that they share.</p>
-<p>The simplest guess is <span class="math inline">\(v_1=v_2\)</span>.
-Unfortunately, that would keep the three points on the line <span
-class="math inline">\(y=x\)</span> or some line that in parallel,
-denoted by <span class="math inline">\(y=x+\xi\)</span>.</p>
-<p>As long as both <span class="math inline">\(v_1\)</span> and <span
-class="math inline">\(v_2\)</span> are negative, the first point would
-be clamped back to <span class="math inline">\((0,0)\)</span>. It is
-then the “a point” as mentioned above. If the absolute values of <span
-class="math inline">\(v_1\)</span> and <span
-class="math inline">\(v_2\)</span> are less than 2, the point <span
-class="math inline">\((2+v_1,2+v_2)\)</span> wouldn’t be clamped, so it
-would be the third point as mentioned above. Now, given the two
-coordinate values of the point <span
-class="math inline">\((1+v_1,1+v_2)\)</span>, we want one of them
-negative and the other one positive. To do so, we could have</p>
-<p><span class="math display">\[ v_1 = -0.5 \]</span> <span
-class="math display">\[ v_2 = -1.5 \]</span></p>
-<h2 id="now-linear-classify">Now, Linear Classify!</h2>
-<p>The above linear transformation and activation moves the original
-four points as follows:</p>
-<p><span class="math display">\[ (0,0) \rightarrow \sigma( v_1, v_2)
-\rightarrow (0, 0) \]</span> <span class="math display">\[ (0,1)
-\rightarrow \sigma( 1 + v_1, 1 + v_2) \rightarrow (0.5, 0) \]</span>
-<span class="math display">\[ (1,0) \rightarrow \sigma( 1 + v_1, 1 +
-v_2) \rightarrow (0.5, 0) \]</span> <span class="math display">\[ (1,1)
-\rightarrow \sigma( 2 + v_1, 2 + v_2) \rightarrow (1.5, 0.5)
+<p><span class="math display">\[
+(x, y) \rightarrow (x + y + v_1, x + y + v_2)
 \]</span></p>
-<p>It is not too hard to tell that the following line could separate the
-red points from the blue ones:</p>
-<p><span class="math display">\[ y = \frac{0.5}{1.5} x - 0.001 =
-\frac{1}{3}x - 0.001 \]</span></p>
-<p>where the slope is derived from the third coordinate because the
-first two are on x-axis now. The intercept <span
-class="math inline">\(-0.001\)</span> is an arbitrary small enough
-negative value.</p>
-<h2 id="the-mlp-for-the-xor-classification">The MLP for the XOR
-Classification</h2>
-<p>A MLP is defined as folows. Given a point at coordinate <span
-class="math inline">\((x,y)\)</span>, the MLP runs the following
-equation:</p>
-<p><span class="math display">\[ y = \sigma( v_1 h_1 + v_2 h_2 + c)
-\]</span> <span class="math display">\[ h_1 = \sigma( w_{11} x + w_{12}
-y + b_1 ) \]</span> <span class="math display">\[ h_2 = \sigma( w_{21} x
-+ w_{22} y + b_2) \]</span></p>
-<p>The above derivation gave us an estimation of the parameters that can
-solve the XOR classification challenge:</p>
-<p><span class="math display">\[ y = \sigma( 3 h_1 +  h_2 - 0.001 )
-\]</span> <span class="math display">\[ h_1 = \sigma( x + y - 0.5 )
-\]</span> <span class="math display">\[ h_2 = \sigma( x + y - 1.5 )
+<p>For the XOR challenge, this transformation produces:</p>
+<p><span class="math display">\[
+(0,0) \rightarrow (v_1, v_2)
+\]</span> <span class="math display">\[
+(0,1) \rightarrow (1 + v_1, 1 + v_2)
+\]</span> <span class="math display">\[
+(1,0) \rightarrow (1 + v_1, 1 + v_2)
+\]</span> <span class="math display">\[
+(1,1) \rightarrow (2 + v_1, 2 + v_2)
 \]</span></p>
+<p>Notice that the middle two blue points now coincide. This is
+progress! However, this setup still doesn’t linearly separate the
+points, as all of them are now on the same line. This is where
+activation functions come in to introduce non-linearity.</p>
+<h2 id="why-we-need-activation-functions">Why We Need Activation
+Functions</h2>
+<p>Activation functions like softmax, tanh, and ReLU clamp negative
+inputs to 0 (or a close value). The key idea is to “clamp” points in a
+way that separates them.</p>
+<p>Given the transformed points:</p>
+<p><span class="math display">\[
+(v_1, v_2), \quad (1 + v_1, 1 + v_2), \quad (2 + v_1, 2 + v_2)
+\]</span></p>
+<p>We can choose <span class="math inline">\(v_1\)</span> and <span
+class="math inline">\(v_2\)</span> such that the activation function
+clamps one point entirely, partially clamps another, and leaves the
+third unchanged, thus breaking their alignment on the same line.</p>
+<p>Let’s start with <span class="math inline">\(v_1 = v_2\)</span>.
+Unfortunately, this keeps the points on a line parallel to <span
+class="math inline">\(y = x\)</span>. To achieve our goal, <span
+class="math inline">\(v_1\)</span> and <span
+class="math inline">\(v_2\)</span> must be negative but different. If
+the absolute values of <span class="math inline">\(v_1\)</span> and
+<span class="math inline">\(v_2\)</span> are less than 2, the third
+point remains unclamped, while the first point gets clamped to <span
+class="math inline">\((0,0)\)</span>. We aim for one coordinate of the
+second point to be clamped while the other remains positive, which leads
+to:</p>
+<p><span class="math display">\[
+v_1 = -0.5, \quad v_2 = -1.5
+\]</span></p>
+<h2 id="now-we-can-linearly-classify">Now, We Can Linearly
+Classify!</h2>
+<p>After the linear transformation and activation, the four points
+transform as follows:</p>
+<p><span class="math display">\[
+(0,0) \rightarrow \sigma(v_1, v_2) = (0,0)
+\]</span> <span class="math display">\[
+(0,1) \rightarrow \sigma(1 + v_1, 1 + v_2) = (0.5, 0)
+\]</span> <span class="math display">\[
+(1,0) \rightarrow \sigma(1 + v_1, 1 + v_2) = (0.5, 0)
+\]</span> <span class="math display">\[
+(1,1) \rightarrow \sigma(2 + v_1, 2 + v_2) = (1.5, 0.5)
+\]</span></p>
+<p>Now, you can easily draw a line separating the red points from the
+blue points:</p>
+<p><span class="math display">\[
+y = \frac{0.5}{1.5}x - 0.001 \approx \frac{1}{3}x - 0.001
+\]</span></p>
+<p>The slope is derived from the third point, as the first two are on
+the x-axis. The intercept <span class="math inline">\(-0.001\)</span> is
+a small negative value to ensure proper separation.</p>
+<h2 id="the-mlp-for-solving-xor">The MLP for Solving XOR</h2>
+<p>An MLP is defined by the following equations. Given a point <span
+class="math inline">\((x, y)\)</span>, the MLP computes:</p>
+<p><span class="math display">\[
+s = \sigma(v_1 h_1 + v_2 h_2 + c)
+\]</span> <span class="math display">\[
+h_1 = \sigma(w_{11}x + w_{12}y + b_1)
+\]</span> <span class="math display">\[
+h_2 = \sigma(w_{21}x + w_{22}y + b_2)
+\]</span></p>
+<p>From the above derivation, we can estimate the parameters needed to
+solve the XOR classification:</p>
+<p><span class="math display">\[
+s = \sigma(3 h_1 + h_2 - 0.001)
+\]</span> <span class="math display">\[
+h_1 = \sigma(x + y - 0.5)
+\]</span> <span class="math display">\[
+h_2 = \sigma(x + y - 1.5)
+\]</span></p>
+<p>If <span class="math inline">\(s &gt; 0\)</span>, classify <span
+class="math inline">\((x, y)\)</span> as red; otherwise, classify it as
+blue.</p>
+<p>This concludes the mental exercise of manually solving the XOR
+problem using an MLP.</p>
