@@ -1,0 +1,149 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1
+id="efficient-implementation-of-rotary-positional-embedding">Efficient
+Implementation of Rotary Positional Embedding</h1>
+<p>Please refer to <a href="positional_encoding.html">my previous
+post</a> for an explanation of why it is crucial to encode positional
+information for Transformer models. Additionally, <a
+href="https://medium.com/ai-insights-cobet/rotary-positional-embeddings-a-detailed-look-and-comprehensive-understanding-4ff66a874d83">this
+post</a> offers a comparison of various approaches to encoding
+positional information. Rotary Positional Embedding (RoPE) is one of the
+best approaches.</p>
+<h2 id="rope">RoPE</h2>
+<p>RoPE takes a hidden state <span class="math inline">\(x\)</span> with
+the shape <span class="math inline">\((B, L, D)\)</span>, where <span
+class="math inline">\(B\)</span> is the batch size, <span
+class="math inline">\(L\)</span> is the sequence length, and <span
+class="math inline">\(D\)</span> is the hidden dimension. For
+simplicity, let’s assume <span class="math inline">\(B=1\)</span>.</p>
+<p>RoPE encodes positional information by rotating the <span
+class="math inline">\(l\)</span>-th column of <span
+class="math inline">\(x\)</span> by an angle <span
+class="math inline">\(l \theta\)</span>. This rotational transformation
+is the source of the term “rotary” in its name.</p>
+<p>Since the rotation is defined in 2D space, we must pair the <span
+class="math inline">\(D\)</span> elements in each column. Each pair is
+then rotated. To simplify implementation, we often “slice” the <span
+class="math inline">\(L \times D\)</span> matrix horizontally, treating
+<span class="math inline">\(x_{l,i}\)</span> and <span
+class="math inline">\(x_{l,D/2+i}\)</span> as a pair.</p>
+<p>To distinguish between pairs in the same column, RoPE rotates each
+pair by different angles. For the <span
+class="math inline">\(i\)</span>-th pair in the <span
+class="math inline">\(l\)</span>-th column, the rotation angle is <span
+class="math inline">\(l \theta_i\)</span>.</p>
+<p>For simplicity, let’s consider the case where <span
+class="math inline">\(D=2\)</span>. In this scenario, the pair to be
+rotated is <span class="math inline">\((x_{l,0}, x_{l,1})\)</span>.</p>
+<h2 id="derivation">Derivation</h2>
+<p><a href="https://www.cuemath.com/algebra/rotation-matrix/">This
+post</a> provides a refresher on the rotation matrix and explains why
+rotating a pair <span class="math inline">\((x_0, x_1)\)</span> results
+in:</p>
+<p><span class="math display">\[( x_0 \cos\theta_l - x_1 \sin\theta_l,
+x_1 \cos\theta_l + x_0 \sin\theta_l ) \]</span></p>
+<p>This inspires the following approach:</p>
+<ol type="1">
+<li>Precompute the <span class="math inline">\(L \times D/2\)</span>
+matrices: <span class="math inline">\(\cos = \cos \theta_{l,i}\)</span>
+and <span class="math inline">\(\sin = \sin \theta_{l,i}\)</span>.</li>
+<li>Rotate <span class="math inline">\(x\)</span> by first splitting it
+into two halves: the upper half <span class="math inline">\(x^u\)</span>
+(denoted by <span class="math inline">\(x_0\)</span> in the above
+equation) and the bottom half <span class="math inline">\(x^b\)</span>
+(denoted by <span class="math inline">\(x_1\)</span>).</li>
+</ol>
+<p>All four matrices—<span class="math inline">\(\cos\)</span>, <span
+class="math inline">\(\sin\)</span>, <span
+class="math inline">\(x^u\)</span>, and <span
+class="math inline">\(x^b\)</span>—have the same size, <span
+class="math inline">\(L \times D/2\)</span>. Therefore, the result is
+the concatenation of the rotated upper and bottom halves:</p>
+<p><span class="math display">\[
+\begin{bmatrix}
+x^u \circ \cos - x^d \circ \sin \\
+x^d \circ \cos + x^u \circ \sin
+\end{bmatrix}
+\]</span></p>
+<p>This is equivalent to:</p>
+<p><span class="math display">\[
+x \circ \hat\cos + \hat{x} \circ \hat\sin
+\]</span></p>
+<p>where <span class="math inline">\(\hat{x}=\begin{bmatrix}- x^d \\ x^u
+\end{bmatrix}\)</span>, <span
+class="math inline">\(\hat\cos=\begin{bmatrix}\cos \\
+\cos\end{bmatrix}\)</span>, and similarly <span
+class="math inline">\(\hat\sin=\begin{bmatrix} \sin \\ \sin
+\end{bmatrix}\)</span>.</p>
+<p>This derivation leads to the efficient RoPE implementation by
+Eleuther. Since we want the hidden dimension pairs to rotate at
+different rates, Eleuther’s implementation creates a <span
+class="math inline">\(D/2\)</span>-dimensional vector <span
+class="math inline">\(\theta\)</span>:</p>
+<p><span class="math display">\[
+\theta = \begin{bmatrix}
+\frac{1}{\text{base}^{0/D}} \\
+\frac{1}{\text{base}^{2/D}} \\
+\frac{1}{\text{base}^{4/D}} \\
+\vdots \\
+\end{bmatrix}
+\]</span></p>
+<p>RoPE rotates each position <span class="math inline">\(l\)</span> by
+the angle <span class="math inline">\(l \theta_i\)</span>, giving us the
+<span class="math inline">\(L \times D/2\)</span> matrix <span
+class="math inline">\(\Theta\)</span>:</p>
+<p><span class="math display">\[ \Theta = \theta \times [0, 1, 2,
+\ldots, L]
+= \begin{bmatrix}
+\ldots &amp; l \frac{1}{\text{base}^{0/D}} &amp; \ldots \\
+\ldots &amp; l \frac{1}{\text{base}^{2/D}} &amp; \ldots \\
+\ldots &amp; l \frac{1}{\text{base}^{4/D}} &amp; \ldots \\
+\vdots &amp; \vdots                        &amp; \vdots \\
+\end{bmatrix}
+\]</span></p>
+<p>Then, we calculate:</p>
+<p><span class="math display">\[
+\hat\cos = \cos\left( \begin{bmatrix} \Theta \\ \Theta \end{bmatrix}
+\right)
+\]</span></p>
+<p><span class="math display">\[
+\hat\sin = \sin\left( \begin{bmatrix} \Theta \\ \Theta \end{bmatrix}
+\right)
+\]</span></p>
+<h2 id="mlx-implementation">MLX Implementation</h2>
+<p>Eleuther provides this implementation in PyTorch, available at <a
+href="https://blog.eleuther.ai/rotary-embeddings/">their blog</a>. MLX
+offers an optimized implementation, <code>mlx.fast.rope</code>, in C++.
+Below is the MLX implementation in Python:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mlx <span class="im">import</span> nn</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> RoPE(nn.Module):</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, dim, base<span class="op">=</span><span class="fl">10000.0</span>):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.dim <span class="op">=</span> dim</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.theta <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> (base <span class="op">**</span> (mx.arange(<span class="dv">0</span>, dim, <span class="dv">2</span>).astype(mx.float16) <span class="op">/</span> dim))  <span class="co"># θ</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__call__</span>(<span class="va">self</span>, x):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        B, L, D <span class="op">=</span> x.shape</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">assert</span> D <span class="op">==</span> <span class="va">self</span>.dim</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        l <span class="op">=</span> mx.arange(L).astype(<span class="va">self</span>.theta.dtype)  <span class="co"># [0, 1, 2 ... L]</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        Theta <span class="op">=</span> mx.einsum(<span class="st">&quot;i,j-&gt;ij&quot;</span>, l, <span class="va">self</span>.theta)  <span class="co"># Θ</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        hatTheta <span class="op">=</span> mx.concatenate([Theta, Theta], axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        sin <span class="op">=</span> mx.sin(hatTheta) <span class="co"># Consider cache it. </span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        cos <span class="op">=</span> mx.cos(hatTheta)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        xu, xd <span class="op">=</span> x[..., : D <span class="op">//</span> <span class="dv">2</span>], x[..., D <span class="op">//</span> <span class="dv">2</span> :]</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        hatx <span class="op">=</span> mx.concatenate([<span class="op">-</span>xd, xu], axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x <span class="op">*</span> cos <span class="op">+</span> hatx <span class="op">*</span> sin</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>L <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>D <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> mx.ones([B, L, D])</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>rope <span class="op">=</span> RoPE(dim<span class="op">=</span>D)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>o <span class="op">=</span> rope(x)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(o)</span></code></pre></div>
