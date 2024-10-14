@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="why-transformer-models-need-positional-encoding">Why Transformer
+Models Need Positional Encoding</h1>
+<p>Yi Wang &lt;yi dot wang dot 2005 在 Gmail&gt;</p>
+<p>Have you ever wondered why positional encoding is necessary in
+Transformer models? Yes, the original paper <em>Attention Is All You
+Need</em> provides an explanation, but it’s rather vague:</p>
+<blockquote>
+<p>Since our model contains no recurrence and no convolution, in order
+for the model to make use of the order of the sequence, we must inject
+some information about the relative or absolute position of the tokens
+in the sequence.</p>
+</blockquote>
+<p>Since the paper was published, there have been numerous tutorials
+discussing how to encode positional information. However, I haven’t seen
+any that delve into the details. So, here is my attempt.</p>
+<p>Consider the following: given a prompt consisting of two tokens,
+<span class="math inline">\([A, B]\)</span>, we are to generate a third
+token, <span class="math inline">\(C\)</span>. This requires running the
+Transformer model, which contains several Transformer layers, and each
+layer consists of self-attention and a linear projection.</p>
+<p>Let’s focus on the self-attention mechanism, which applies three
+linear projections to the input <span class="math inline">\(x = [e(A);
+e(B), e(C)]\)</span>, where <span class="math inline">\(e()\)</span>
+denotes the embedding vector (or more generally, the hidden state) of a
+token. The outputs of these three projections are known as the queries,
+keys, and values of the input tokens, denoted by:</p>
+<p><span class="math display">\[
+q = \begin{bmatrix} q(C) \end{bmatrix} \;\;
+k = \begin{bmatrix} k(A) \\ k(B) \\ k(C) \end{bmatrix} \;\;
+v = \begin{bmatrix} v(A) \\ v(B) \\ v(C) \end{bmatrix}
+\]</span></p>
+<p>Note that during token generation (inference time), the query
+contains only one token, which differs from the training scenario where
+<span class="math inline">\(q = [q(A) \\ q(B) \\ q(C)]\)</span>.</p>
+<p>The definition of self-attention is as follows. It computes an
+attention matrix from <span class="math inline">\(q\)</span> and <span
+class="math inline">\(k\)</span>, and uses it to weight the vectors in
+<span class="math inline">\(v\)</span>. The <span
+class="math inline">\(\text{softmax}\)</span> function normalizes each
+row of the attention matrix:</p>
+<p><span class="math display">\[ \text{softmax}(q \times k^T) \times v
+\]</span></p>
+<p>In our case, the attention matrix is as follows:</p>
+<p><span class="math display">\[
+s = q \times k^T
+= [q(C)] \times \begin{bmatrix} k(A) \\ k(B) \\ k(C) \end{bmatrix}
+= \begin{bmatrix} q(C) \cdot k(A) \\ q(C) \cdot k(B) \\ q(C) \cdot k(C)
+\end{bmatrix}
+\]</span></p>
+<p>The final output is:</p>
+<p><span class="math display">\[
+q(C) \cdot k(A) \; v(A) + q(C) \cdot k(B) \; v(B) + q(C) \cdot k(C) \;
+v(C)
+\]</span></p>
+<p>Now, let’s switch the order of tokens in the prompt from <span
+class="math inline">\([A, B]\)</span> to <span class="math inline">\([B,
+A]\)</span>. Interestingly, the self-attention output is as follows,
+which has the exact same value as before because the summation operation
+does not depend on the order of its inputs:</p>
+<p><span class="math display">\[
+q(C) \cdot k(B) \; v(B) + q(C) \cdot k(A) \; v(A) + q(C) \cdot k(C) \;
+v(C)
+\]</span></p>
