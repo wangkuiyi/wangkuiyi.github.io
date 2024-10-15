@@ -1,0 +1,88 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1
+id="tiled-matrix-multiplication-a-prerequisite-to-understanding-flashattention">Tiled
+Matrix Multiplication: A Prerequisite to Understanding
+FlashAttention</h1>
+<p>I recently came across <a
+href="https://courses.cs.washington.edu/courses/cse599m/23sp/notes/flashattn.pdf">a
+great note about FlashAttention</a>, which explains that a prerequisite
+to understanding FlashAttention is tiled matrix multiplication. To
+confirm my memory about this algorithm, I wrote the following MLX
+programs.</p>
+<p>Of course, as a deep learning toolkit, MLX provides a built-in matrix
+multiplication operator, <code>@</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mlx.core <span class="im">as</span> mx</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> mx.ones([<span class="dv">4</span>, <span class="dv">2</span>])</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> mx.array([[<span class="dv">10</span>, <span class="dv">10</span>, <span class="dv">10</span>, <span class="dv">10</span>], [<span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">20</span>]])</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(a <span class="op">@</span> b)</span></code></pre></div>
+<p>Internally, the <code>@</code> operator performs multiple dot
+products:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> by_definition(a, b):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> mx.zeros([a.shape[<span class="dv">0</span>], b.shape[<span class="dv">1</span>]])</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(a.shape[<span class="dv">0</span>]):</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(b.shape[<span class="dv">1</span>]):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>            c[i, j] <span class="op">=</span> mx.inner(a[i, :], b[:, j])</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(by_definition(a, b))</span></code></pre></div>
+<p>The dot product, <code>mx.inner</code>, includes a loop that iterates
+over the elements of the input vectors. By writing this loop explicitly
+as <code>for k in range(a.shape[1])</code> in the following code, we
+obtain the vanilla matrix multiplication algorithm. This can be seen as
+a specific case of the tiled matrix multiplication algorithm, where the
+tile size is <span class="math inline">\(1 \times 1\)</span>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tile_1x1(a, b):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> mx.zeros([a.shape[<span class="dv">0</span>], b.shape[<span class="dv">1</span>]])</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(a.shape[<span class="dv">0</span>]):</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(a.shape[<span class="dv">1</span>]):</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(b.shape[<span class="dv">1</span>]):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                c[i, j] <span class="op">+=</span> a[i, k] <span class="op">*</span> b[k, j]</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c</span></code></pre></div>
+<p>Note that the first two loops over <code>i</code> and <code>k</code>
+iterate through every element of <code>a</code>. For each element
+<code>a[i, k]</code>, the dot product is only performed with the
+corresponding elements <code>b[k, j]</code> for all <code>j</code>
+values, as shown in the figure below. The highlighted element
+<code>a[1,1]</code> is dot-multiplied with <code>b[:, 1]</code>.</p>
+<p><img src="tile/1.svg" alt="Tile 1x1 Matrix Multiplication"/></p>
+<p>The above algorithm can be generalized to arbitrary tile sizes, which
+can be proven mathematically. However, instead of going through a formal
+proof, I wrote the following code to verify it.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tile_txt(a, b, t<span class="op">=</span><span class="dv">2</span>):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> mx.zeros([a.shape[<span class="dv">0</span>], b.shape[<span class="dv">1</span>]])</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, a.shape[<span class="dv">0</span>], t):</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, a.shape[<span class="dv">1</span>], t):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, b.shape[<span class="dv">1</span>], t):</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                at <span class="op">=</span> a[i : i <span class="op">+</span> t, k : k <span class="op">+</span> t]</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                bt <span class="op">=</span> b[k : k <span class="op">+</span> t, j : j <span class="op">+</span> t]</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                c[i : i <span class="op">+</span> t, j : j <span class="op">+</span> t] <span class="op">+=</span> at <span class="op">@</span> bt</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c</span></code></pre></div>
+<p>The logic remains the same. Each tile <span class="math inline">\((i,
+k)\)</span> of matrix <code>a</code> is multiplied only with the
+corresponding tiles <span class="math inline">\((k, j)\)</span> in
+matrix <code>b</code>, as illustrated in the following figure:</p>
+<p><img src="tile/2.svg" alt="Generalized Tiled Matrix Multiplication"/></p>
+<p>The tiles don’t need to be square. If you choose a tile size of <span
+class="math inline">\(n \times m\)</span> for <code>a</code>, you must
+split <code>b</code> into tiles of size <span class="math inline">\(m
+\times n\)</span>. The following code verifies that the tiled matrix
+multiplication algorithm works when <code>a</code> has tiles of size
+<span class="math inline">\(2 \times K\)</span> and <code>b</code> has
+tiles of size <span class="math inline">\(K \times 2\)</span>.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tile_1xt(a, b, t<span class="op">=</span><span class="dv">2</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> mx.zeros([a.shape[<span class="dv">0</span>], b.shape[<span class="dv">1</span>]])</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, a.shape[<span class="dv">0</span>], t):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, b.shape[<span class="dv">1</span>], t):</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            at <span class="op">=</span> a[i : i <span class="op">+</span> t, :]</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            bt <span class="op">=</span> b[:, j : j <span class="op">+</span> t]</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            c[i : i <span class="op">+</span> t, j : j <span class="op">+</span> t] <span class="op">+=</span> at <span class="op">@</span> bt</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> c</span></code></pre></div>
+<p>That is all. The next step is to add online softmax.</p>
