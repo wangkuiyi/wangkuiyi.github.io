@@ -1,4 +1,6 @@
-# Online Softmax
+# FlashAttention (Part 2): Online Softmax
+
+This is the second part of my reading notes of [Zihao Ye's note on FlashAttention](https://courses.cs.washington.edu/courses/cse599m/23sp/notes/flashattn.pdf).
 
 The definition of softmax is as follows:
 

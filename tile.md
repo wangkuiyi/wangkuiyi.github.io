@@ -1,4 +1,6 @@
-# Tiled Matrix Multiplication: A Prerequisite to Understanding FlashAttention
+# FlashAttention (Part 1): Tiled Matrix Multiplication
+
+This is the first part of my reading notes of [Zihao Ye's note on FlashAttention](https://courses.cs.washington.edu/courses/cse599m/23sp/notes/flashattn.pdf).
 
 I recently came across [a great note about FlashAttention](https://courses.cs.washington.edu/courses/cse599m/23sp/notes/flashattn.pdf), which explains that a prerequisite to understanding FlashAttention is tiled matrix multiplication. To confirm my memory about this algorithm, I wrote the following MLX programs.
 
