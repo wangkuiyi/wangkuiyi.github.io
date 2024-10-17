@@ -1,0 +1,103 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="flashattention-part-3.">FlashAttention (Part 3.)</h1>
+<p>The schematic illustration in the original paper is critical to
+understand FlashAttention.</p>
+<p><img src="flashattention.png" /img></p>
+<p>Let us denote the index over the outter loop in the above figure as
+<span class="math inline">\(i\)</span> and that for the inner loop as
+<span class="math inline">\(k\)</span>. The operation of self-attention
+is defined as:</p>
+<p><span class="math display">\[O = \text{softmax}(Q K^T) V\]</span></p>
+<p>Or, by separating the steps, we denote:</p>
+<p><span class="math display">\[
+X = Q K^T
+A = \text{softmax}(X)
+O = A V
+\]</span></p>
+<p>For a specific index <span class="math inline">\(k\)</span>, the
+induction processes of self-attention is as the following. For the
+simplicity, we ignore <span class="math inline">\(k\)</span>. Indeed,
+each of the following variable, for example, <span
+class="math inline">\(x_i\)</span>, should have been <span
+class="math inline">\(x_{k,i}\)</span>.</p>
+<p><span class="math display">\[
+\begin{aligned}
+x_i &amp;= Q_k K_i^T \\
+m_i &amp;= \max(m_{i-1}, x_i) \\
+\delta_i &amp;= \delta_{i-1} \exp(m_{i-1}-m_i) + \exp(x_i-m_i) \\
+a_i &amp;= \frac{\exp(x_i-m_N)}{\delta_N} \\
+o_i &amp;= o_{i-1} + a_i V_i \\
+\end{aligned}
+\]</span></p>
+<p>The first induction process comes from the fact that each element
+<span class="math inline">\(a_{k,i}\)</span> is the result of a
+dot-product between the <span class="math inline">\(k\)</span>-th row of
+<span class="math inline">\(Q\)</span>, denoted by <span
+class="math inline">\(Q_k\)</span>, and the <span
+class="math inline">\(i\)</span>-th column of <span
+class="math inline">\(K^T\)</span>, denoted as <span
+class="math inline">\(K_i^T\)</span>.</p>
+<p>The second, the third, and the fourth are from <a
+href="online-softmax.html">the previous post about Online
+Softmax</a>.</p>
+<p>The last one is the induction process of the dot-product between the
+<span class="math inline">\(k\)</span>-th row of <span
+class="math inline">\(A\)</span>, denoted by <span
+class="math inline">\(a_{k,i}\)</span>, or, short for <span
+class="math inline">\(a_i\)</span>, and the <span
+class="math inline">\(k\)</span>-th column of <span
+class="math inline">\(V\)</span>, denoted as <span
+class="math inline">\(V_{k,i}\)</span> and short for <span
+class="math inline">\(V_i\)</span>.</p>
+<p>Because the fourth induction rule depends on <span
+class="math inline">\(m_N\)</span> and <span
+class="math inline">\(\delta_N\)</span>, we counldn’t start it before
+the completion of the first three. However, the fourth and the fifth
+could run in parallel.</p>
+<p>A key contribution of FlashAttention is the derivation of a surrogate
+<span class="math inline">\(\omega_i\)</span> to replace <span
+class="math inline">\(a_i\)</span> and <span
+class="math inline">\(o_i\)</span>. This <span
+class="math inline">\(\omega_i\)</span> can run in parallel with the
+first three induction rules.</p>
+<p>As <span class="math inline">\(\omega_i\)</span> is a surrogate of
+<span class="math inline">\(a_i\)</span> and <span
+class="math inline">\(o_i\)</span>, let us examing <span
+class="math inline">\(o_i\)</span> first.</p>
+<p><span class="math display">\[
+o_i = \sum_{j=1}^i \frac{\exp(x_j - m_N)}{\delta_N} V_j
+\]</span></p>
+<p>Using tricks explained in <a href="online-softmax.html">the post
+about Online Softmax</a>, we want to define <span
+class="math inline">\(\omega_i\)</span> in the following form so that
+<span class="math inline">\(\omega_N=o_N\)</span>, which is the final
+result that we want.</p>
+<p><span class="math display">\[
+\omega_i = \sum_{j=1}^i \frac{\exp(x_j - m_i)}{\delta_i} V_j
+\]</span></p>
+<p>Also, we want <span class="math inline">\(\omega_i\)</span> to be
+inductive, so it should depends on <span
+class="math inline">\(\omega_{i-1}\)</span>:</p>
+<p><span class="math display">\[
+\omega_{i-1} = \sum_{j=1}^i \frac{\exp(x_j - m_{i-1})}{\delta_{i-1}} V_j
+\]</span></p>
+<p>In order to rewrite <span class="math inline">\(\omega_i\)</span> as
+a function of <span class="math inline">\(\omega_{i-1}\)</span>, we need
+to move</p>
+<p><span class="math display">\[
+\begin{aligned}
+\omega_i
+&amp;= \sum_{j=1}^i \frac{\exp(x_j - m_i)}{\delta_i} V_j \\
+&amp;= \sum_{j=1}^{i-1} \frac{\exp(x_j - m_i)}{\delta_i} V_j +
+\frac{\exp(x_i - m_i)}{\delta_i} V_i \\
+&amp;= \sum_{j=1}^{i-1} \frac{\exp(x_j - m_{i-1} + m_{i-1} -
+m_i)}{\delta_{i-1}} \frac{\delta_{i-1}}{\delta_i} V_j + \frac{\exp(x_i -
+m_i)}{\delta_i} V_i \\
+&amp;= \sum_{j=1}^{i-1} \frac{\exp(x_j - m_{i-1})}{\delta_{i-1}}
+\frac{\exp(m_{i-1} - m_i) \delta_{i-1}}{\delta_i} V_j + \frac{\exp(x_i -
+m_i)}{\delta_i} V_i \\
+&amp;= \omega_{i-1} \frac{\exp(m_{i-1} - m_i) \delta_{i-1}}{\delta_i} +
+\frac{\exp(x_i - m_i)}{\delta_i} V_i \\
+\end{aligned}
+\]</span></p>
