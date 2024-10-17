@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="online-softmax">Online Softmax</h1>
+<p>The definition of softmax is as follows:</p>
+<p><span class="math display">\[\left\{ \frac{\exp(x_i)}{\sum_{j=1}^N
+\exp(x_j)} \right\}_{i=1}^N\]</span></p>
+<p>It is well-known numerically instable – if any <span
+class="math inline">\(x_i\geq 11\)</span>, <span
+class="math inline">\(\exp(x_i)\)</span> exceeds the maximum value of
+float16. To address this, we compute an alternative form which gives
+equivalent result but numerically stable:</p>
+<p><span class="math display">\[ \left\{ \frac{\exp(x_i-m)}{\sum_{j=1}^N
+\exp(x_j-m)} \right\}_{i=1}^N \]</span></p>
+<p>where <span class="math inline">\(m=\max_{j=1}^N x_j\)</span>. This
+form is safe because <span class="math inline">\(x_i - m \leq
+0\)</span>, ensuring that <span class="math inline">\(0 &lt; \exp(x_i -
+m) \leq 1\)</span>.</p>
+<p>Given an input array <span
+class="math inline">\({x_i}{i=1}^N\)</span>, the traditional algorithm
+proceeds by performing the following three inductive processes
+sequentially to compute the result array <span
+class="math inline">\({a_i}{i=1}^N\)</span>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+m_1 \quad &amp; \ldots &amp; m_i=\max(m_{i-1}, x_m) \quad        &amp;
+\ldots &amp; m_N \\
+d_1 \quad &amp; \ldots &amp; d_i=d_{i-1} +\exp(x_i-m_N) \quad    &amp;
+\ldots &amp; d_N \\
+a_1 \quad &amp; \ldots &amp; a_i=\frac{\exp(x_i-m_N)}{d_N} \quad &amp;
+\ldots &amp; a_N \\
+\end{aligned}
+\]</span></p>
+<p>However, we prefer inductive processes that can run in parallel on a
+GPU. This would allow us to load the array <span
+class="math inline">\({x_i}{i=1}^N\)</span> once and save the result
+<span class="math inline">\({a_i}{i=1}^N\)</span> without needing to
+store or load intermediate results like <span
+class="math inline">\({m_i}\)</span> and <span
+class="math inline">\({d_i}\)</span>. Unfortunately, the three processes
+above cannot run in parallel because <span
+class="math inline">\(d_i\)</span> depends on <span
+class="math inline">\(m_N\)</span>, and <span
+class="math inline">\(a_i\)</span> depends on both <span
+class="math inline">\(d_N\)</span> and <span
+class="math inline">\(m_N\)</span>.</p>
+<p>To address this, let’s explore whether we can construct a surrogate
+of <span class="math inline">\(d_i\)</span>, denoted as <span
+class="math inline">\(\delta_i\)</span>, that allows the inductive
+processes for <span class="math inline">\(m_i\)</span> and <span
+class="math inline">\(\delta_i\)</span> to run in parallel.
+Specifically, we want <span class="math inline">\(\delta_i\)</span> to
+satisfy the following properties:</p>
+<ol type="1">
+<li>We want <span class="math inline">\(\delta_i = \sum_{j=1}^i \exp(x_j
+- m_i)\)</span>, so that <span class="math inline">\(\delta_N =
+\sum_{j=1}^N \exp(x_j - m_N)\)</span>, which is required to compute
+<span class="math inline">\(a_i\)</span>.</li>
+<li>Since <span class="math inline">\(\delta_i\)</span> is inductive, it
+should depend on <span class="math inline">\(\delta_{i-1}\)</span>.</li>
+<li>To allow parallel execution, <span
+class="math inline">\(\delta_i\)</span> must not depend on future values
+such as <span class="math inline">\(x_{i+1}, \ldots\)</span> or <span
+class="math inline">\(m_{i+1}, \ldots\)</span>.</li>
+</ol>
+<p>We begin by considering:</p>
+<p><span class="math display">\[\delta_i=\sum_{j=1}^i
+\exp(x_j-m_i)\]</span></p>
+<p>To ensure <span class="math inline">\(\delta_i\)</span> depends on
+<span class="math inline">\(\delta_{i-1}\)</span>, which is:</p>
+<p><span class="math display">\[\delta_{i-1}=\sum_{j=1}^{i-1}
+\exp(x_j-m_{i-1})\]</span></p>
+<p>we need to split <span class="math inline">\(\delta_i\)</span> into
+two parts: one involving <span
+class="math inline">\(\delta_{i-1}\)</span> (which should not depend on
+<span class="math inline">\(x_i\)</span> or <span
+class="math inline">\(m_i\)</span>), and the remaining terms that depend
+on <span class="math inline">\(x_i\)</span> and <span
+class="math inline">\(m_i\)</span>. The first step is straightforward –
+we separate the last term in the summation:</p>
+<p><span class="math display">\[\delta_i=\sum_{j=1}^{i-1} \exp(x_j-m_i)
++ \exp(x_i-m_i)\]</span></p>
+<p>Now, <span class="math inline">\(x_i\)</span> only appears in the
+second term. However, <span class="math inline">\(m_i\)</span> still
+appears in the summation. Let’s take the next step:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\delta_i &amp;= \sum_{j=1}^{i-1} \exp(x_j-m_{i-1}+m_{i-1}-m_i) +
+\exp(x_i-m_i) \\
+         &amp;= \left[\sum_{j=1}^{i-1} \exp(x_j-m_{i-1})\right]
+\exp(m_{i-1}-m_i) + \exp(x_i-m_i)
+\end{aligned}
+\]</span></p>
+<p>The expression inside the square brackets is exactly <span
+class="math inline">\(\delta_{i-1}\)</span>. Therefore, we have:</p>
+<p><span class="math display">\[
+\delta_i = \delta_{i-1} \exp(m_{i-1}-m_i) + \exp(x_i-m_i)
+\]</span></p>
+<p>This allows us to compute <span
+class="math inline">\(\delta_i\)</span> inductively in parallel with
+<span class="math inline">\(m_i\)</span>.</p>
