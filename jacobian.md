@@ -104,8 +104,6 @@ $$
 
 ## Derivatives Are Functions
 
-Before diving into how JVP and VJP relate to forward-mode and reverse-mode autodiff, it’s essential to revisit a fundamental mathematical concept.
-
 In the above discussion, we used $\frac{\partial y_j}{\partial x_i}$, which simplifies $\frac{\partial y_j(x_i)}{\partial x_i}$. The parentheses are crucial -- they indicate that $y_j$ is not a fixed value but a function depending on $x_i$.
 
 Consider the simplest case where $n=m=1$, the function $f(x)$ takes a scalar value input and returns a scalar output.  Suppose that $f(x)=x^2$. The derivative of $f(x)$, denoted as $f'(x)$, is a function depending on $x$, just like $f(x)$ does.
