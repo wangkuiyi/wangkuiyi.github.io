@@ -104,7 +104,7 @@ $$
 
 ## Derivatives Are Functions
 
-In the above discussion, we used $\frac{\partial y_j}{\partial x_i}$, which simplifies $\frac{\partial y_j(x_i)}{\partial x_i}$. The parentheses are crucial -- they indicate that $y_j$ is not a fixed value but a function depending on $x_i$.
+In the above discussion, we used $\frac{\partial y_j}{\partial x_i}$, which simplifies $\frac{\partial y_j(x_1,\ldots,x_n)}{\partial x_i}$. The parentheses are crucial -- they indicate that $y_j$ is not a fixed value but a function depending on $x_i$'s.
 
 Consider the simplest case where $n=m=1$, the function $f(x)$ takes a scalar value input and returns a scalar output.  Suppose that $f(x)=x^2$. The derivative of $f(x)$, denoted as $f'(x)$, is a function depending on $x$, just like $f(x)$ does.
 
@@ -119,9 +119,9 @@ More generally, the Jacobian matrix consists of functions, not fixed values. It 
 $$
 J(x)=
 \begin{bmatrix}
-\frac{\partial y_1(x_1)}{\partial x_1} & \ldots & \frac{\partial y_1(x_n)}{\partial x_n} \\
+\frac{\partial y_1(x_1,\ldots,x_n)}{\partial x_1} & \ldots & \frac{\partial y_1(x_1,\ldots,x_n)}{\partial x_n} \\
 \vdots & \ddots & \vdots \\ 
-\frac{\partial y_m(x_1)}{\partial x_1} & \ldots & \frac{\partial y_m(x_n)}{\partial x_n}
+\frac{\partial y_m(x_1,\ldots,x_n)}{\partial x_1} & \ldots & \frac{\partial y_m(x_1,\ldots,x_n)}{\partial x_n}
 \end{bmatrix}
 $$
 
@@ -209,7 +209,7 @@ This Jacobian consists of functions depending on $x_1$ and $x_2$.
 
 ## JVP and VJP Are Functions
 
-Since the Jacobian matrix is a function of $x$, both JVP and VJP are also functions:
+Since the Jacobian matrix is a function of $x$, both JVP and VJP are functions of $x$ and $v$:
 
 $$\text{jvp}_f(x, v) = J_f(x)\cdot v$$
 
@@ -229,7 +229,7 @@ J(x_1,\ldots,x_n)
 \end{aligned}
 $$
 
-Since $f(x_1,\ldots,x_n)$ returns a scalar, the Jacobian returned by `jax.grad(f)` is a row vector. Here's an example:
+Since $f(x_1,\ldots,x_n)$ returns a scalar, the Jacobian returned by `jax.grad(f)` returns a row vector. Here's an example:
 
 ```python
 import jax

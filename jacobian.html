@@ -137,10 +137,11 @@ class="math inline">\(y_j\)</span>.</strong></p>
 <h2 id="derivatives-are-functions">Derivatives Are Functions</h2>
 <p>In the above discussion, we used <span
 class="math inline">\(\frac{\partial y_j}{\partial x_i}\)</span>, which
-simplifies <span class="math inline">\(\frac{\partial y_j(x_i)}{\partial
-x_i}\)</span>. The parentheses are crucial – they indicate that <span
-class="math inline">\(y_j\)</span> is not a fixed value but a function
-depending on <span class="math inline">\(x_i\)</span>.</p>
+simplifies <span class="math inline">\(\frac{\partial
+y_j(x_1,\ldots,x_n)}{\partial x_i}\)</span>. The parentheses are crucial
+– they indicate that <span class="math inline">\(y_j\)</span> is not a
+fixed value but a function depending on <span
+class="math inline">\(x_i\)</span>’s.</p>
 <p>Consider the simplest case where <span
 class="math inline">\(n=m=1\)</span>, the function <span
 class="math inline">\(f(x)\)</span> takes a scalar value input and
@@ -161,11 +162,11 @@ values:</p>
 <p><span class="math display">\[
 J(x)=
 \begin{bmatrix}
-\frac{\partial y_1(x_1)}{\partial x_1} &amp; \ldots &amp; \frac{\partial
-y_1(x_n)}{\partial x_n} \\
+\frac{\partial y_1(x_1,\ldots,x_n)}{\partial x_1} &amp; \ldots &amp;
+\frac{\partial y_1(x_1,\ldots,x_n)}{\partial x_n} \\
 \vdots &amp; \ddots &amp; \vdots \\
-\frac{\partial y_m(x_1)}{\partial x_1} &amp; \ldots &amp; \frac{\partial
-y_m(x_n)}{\partial x_n}
+\frac{\partial y_m(x_1,\ldots,x_n)}{\partial x_1} &amp; \ldots &amp;
+\frac{\partial y_m(x_1,\ldots,x_n)}{\partial x_n}
 \end{bmatrix}
 \]</span></p>
 <h3 id="example-1.-jacobian-of-w-x">Example 1. Jacobian of <span
@@ -243,8 +244,9 @@ class="math inline">\(x_1\)</span> and <span
 class="math inline">\(x_2\)</span>.</p>
 <h2 id="jvp-and-vjp-are-functions">JVP and VJP Are Functions</h2>
 <p>Since the Jacobian matrix is a function of <span
-class="math inline">\(x\)</span>, both JVP and VJP are also
-functions:</p>
+class="math inline">\(x\)</span>, both JVP and VJP are functions of
+<span class="math inline">\(x\)</span> and <span
+class="math inline">\(v\)</span>:</p>
 <p><span class="math display">\[\text{jvp}_f(x, v) = J_f(x)\cdot
 v\]</span></p>
 <p><span class="math display">\[\text{vjp}_f(x, v) = v\cdot
@@ -265,8 +267,8 @@ J(x_1,\ldots,x_n)
 \end{aligned}
 \]</span></p>
 <p>Since <span class="math inline">\(f(x_1,\ldots,x_n)\)</span> returns
-a scalar, the Jacobian returned by <code>jax.grad(f)</code> is a row
-vector. Here’s an example:</p>
+a scalar, the Jacobian returned by <code>jax.grad(f)</code> returns a
+row vector. Here’s an example:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
