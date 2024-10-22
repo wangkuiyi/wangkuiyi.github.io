@@ -8,3 +8,4 @@
 - [FlashAttention (Part 1): Tiled Matrix Multiplication](tile.html)
 - [FlashAttention (Part 2): Online Softmax](online-softmax.html)
 - [FlashAttention (Part 3.)](flashattention.html)
+- [The Jacobian in JVP and VJP](jacobian.html)

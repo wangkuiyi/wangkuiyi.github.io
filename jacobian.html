@@ -1,0 +1,329 @@
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<link rel="stylesheet" href="https://jingnanshi.com/static/main.css" />
+<link rel="stylesheet" href="https://jingnanshi.com/static/code.css" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="the-jacobian-in-jvp-and-vjp">The Jacobian in JVP and VJP</h1>
+<center>
+<a href="https://wangkuiyi.github.io/">Yi Wang</a>
+</center>
+<p>This article presents my perspective on Jingnan Shi’s excellent post
+<a href="https://jingnanshi.com/blog/autodiff.html">Automatic
+Differentiation: Forward and Reverse</a> from the viewpoint of a deep
+learning toolkit developer. (I worked on Paddle and PyTorch.) I also
+shamelessly import his CSS files.</p>
+<p>Another interesting read is <a
+href="https://jax.readthedocs.io/en/latest/notebooks/autodiff_cookbook.html">The
+Autodiff Cookbook of JAX</a>. Although it doesn’t delve into the
+mathematical details, it references textbooks. If you find the math in
+those textbooks confusing, feel free to use this article as a
+supplement.</p>
+<h2 id="foundation-of-deep-learning">Foundation of Deep Learning</h2>
+<p>The terms JVP (Jacobian-vector product) and VJP (vector-Jacobian
+product) are prevalent in the codebase and documentation of JAX and MLX.
+If you’re contributing to MLX, you may need to implement or override
+methods named jvp and vjp. These foundational concepts enable JAX and
+MLX to compute higher-order derivatives.</p>
+<h2 id="jvp-and-vjp">JVP and VJP</h2>
+<p>JVP refers to the product of a Jacobian matrix <span
+class="math inline">\(J\)</span> and a vector <span
+class="math inline">\(v\)</span>:</p>
+<p><span class="math display">\[J\cdot v\]</span></p>
+<p>Similarly, VJP refers to:</p>
+<p><span class="math display">\[v\cdot J\]</span></p>
+<p><strong>But what exactly is a Jacobian matrix, and why do we need
+these products?</strong></p>
+<h2 id="j-the-jacobian-matrix"><span class="math inline">\(J\)</span>:
+The Jacobian Matrix</h2>
+<p>Consider a function <span class="math inline">\(f\)</span> that takes
+<span class="math inline">\(n\)</span> inputs, <span
+class="math inline">\(x_1,\ldots,x_n\)</span>, and returns <span
+class="math inline">\(m\)</span> outputs, <span
+class="math inline">\(y_1,\ldots,y_m\)</span>. We are interested in
+determining how much the <span class="math inline">\(j\)</span>-th
+output changes when introducing a small change to the <span
+class="math inline">\(i\)</span>-th input. This change is denoted as
+<span class="math inline">\(\partial y_j / \partial x_i\)</span>.</p>
+<p>The Jacobian matrix is a collection of these partial derivatives:</p>
+<p><span class="math display">\[
+J =
+\begin{bmatrix}
+\frac{\partial y_1}{\partial x_1} &amp; \ldots &amp; \frac{\partial
+y_1}{\partial x_n} \\
+\vdots &amp; \ddots &amp; \vdots \\
+\frac{\partial y_m}{\partial x_1} &amp; \ldots &amp; \frac{\partial
+y_m}{\partial x_n}
+\end{bmatrix}
+\]</span></p>
+<p><strong>Why is each column of <span class="math inline">\(J\)</span>
+associated with <span class="math inline">\(x_i\)</span> and each row
+with <span class="math inline">\(y_j\)</span>?</strong></p>
+<h2 id="the-v-in-jvp">The V in JVP</h2>
+<p>The Jacobian matrix tells us how changes in <span
+class="math inline">\(x_i\)</span> affect <span
+class="math inline">\(y_j\)</span>. For instance, if we change <span
+class="math inline">\(x_1\)</span> while keeping the other <span
+class="math inline">\(x_i\)</span> values constant, the change in the
+<span class="math inline">\(y_j\)</span> values is:</p>
+<p><span class="math display">\[
+J
+\cdot
+\begin{bmatrix}
+1 \\
+0 \\
+\vdots
+\end{bmatrix}
+=
+\begin{bmatrix}
+\frac{\partial y_1}{\partial x_1}  \\
+\vdots \\
+\frac{\partial y_m}{\partial x_1}
+\end{bmatrix}
+\]</span></p>
+<p>In general, if each <span class="math inline">\(x_i\)</span> changes
+by <span class="math inline">\(\epsilon_i\)</span>, represented as <span
+class="math inline">\(v=[\epsilon_1,\ldots,\epsilon_n]^T\)</span>, the
+corresponding change to <span class="math inline">\(y_j\)</span> is:</p>
+<p><span class="math display">\[
+J
+\cdot
+\begin{bmatrix}
+\epsilon_1 \\
+\vdots \\
+\epsilon_n
+\end{bmatrix}
+\]</span></p>
+<p><strong>To represent the JVP correctly, the Jacobian’s columns must
+correspond to <span class="math inline">\(x_i\)</span>.</strong></p>
+<h2 id="the-v-in-vjp">The V in VJP</h2>
+<p>In some situations, such as deep learning, the outputs <span
+class="math inline">\(y_j\)</span> might be passed into another
+function, say <span class="math inline">\(g(y_1,\ldots,y_m)\)</span>,
+which could be a loss function that returns a scalar (the loss). The
+derivative of <span class="math inline">\(g\)</span>, <span
+class="math inline">\(\partial g/\partial y_j\)</span>, tells us how
+much the loss changes with respect to <span
+class="math inline">\(y_j\)</span>. To understand how changes in <span
+class="math inline">\(x_i\)</span> affect the loss, we define:</p>
+<p><span class="math display">\[
+v = [\frac{\partial{g}}{\partial{y_1}}, \ldots,
+\frac{\partial{g}}{\partial{y_m}}]
+\]</span></p>
+<p>and compute VJP:</p>
+<p><span class="math display">\[
+\begin{aligned}
+v \cdot J
+&amp;=
+\left[
+\sum_j \frac{\partial g}{\partial y_j} \frac{\partial y_j}{\partial
+x_1}, \ldots, \sum_j \frac{\partial g}{\partial y_j} \frac{\partial
+y_j}{\partial x_n}
+\right]
+\\
+&amp;=
+\left[
+\frac{\partial g}{\partial x_1}, \ldots, \frac{\partial g}{\partial x_n}
+\right]
+\end{aligned}
+\]</span></p>
+<p><strong>For the VJP to function correctly, each row of the Jacobian
+must correspond to <span
+class="math inline">\(y_j\)</span>.</strong></p>
+<h2 id="derivatives-are-functions">Derivatives Are Functions</h2>
+<p>Before diving into how JVP and VJP relate to forward-mode and
+reverse-mode autodiff, it’s essential to revisit a fundamental
+mathematical concept.</p>
+<p>In the above discussion, we used <span
+class="math inline">\(\frac{\partial y_j}{\partial x_i}\)</span>, which
+simplifies <span class="math inline">\(\frac{\partial y_j(x_i)}{\partial
+x_i}\)</span>. The parentheses are crucial – they indicate that <span
+class="math inline">\(y_j\)</span> is not a fixed value but a function
+depending on <span class="math inline">\(x_i\)</span>.</p>
+<p>Consider the simplest case where <span
+class="math inline">\(n=m=1\)</span>, the function <span
+class="math inline">\(f(x)\)</span> takes a scalar value input and
+returns a scalar output. Suppose that <span
+class="math inline">\(f(x)=x^2\)</span>. The derivative of <span
+class="math inline">\(f(x)\)</span>, denoted as <span
+class="math inline">\(f&#39;(x)\)</span>, is a function depending on
+<span class="math inline">\(x\)</span>, just like <span
+class="math inline">\(f(x)\)</span> does.</p>
+<p><span class="math display">\[
+f&#39;(x) = \frac{\partial f(x)}{\partial x} = 2x
+\]</span></p>
+<h2 id="jacobians-are-functions">Jacobians Are Functions</h2>
+<p>More generally, the Jacobian matrix consists of functions, not fixed
+values. It can also be seen as a function of <span
+class="math inline">\(x={x_i,\ldots,x_n}\)</span>, returning a matrix of
+values:</p>
+<p><span class="math display">\[
+J(x)=
+\begin{bmatrix}
+\frac{\partial y_1(x_1)}{\partial x_1} &amp; \ldots &amp; \frac{\partial
+y_1(x_n)}{\partial x_n} \\
+\vdots &amp; \ddots &amp; \vdots \\
+\frac{\partial y_m(x_1)}{\partial x_1} &amp; \ldots &amp; \frac{\partial
+y_m(x_n)}{\partial x_n}
+\end{bmatrix}
+\]</span></p>
+<h3 id="example-1.-jacobian-of-w-x">Example 1. Jacobian of <span
+class="math inline">\(W x\)</span></h3>
+<p>Consider the function <span class="math inline">\(f\)</span>, which
+takes a vector <span class="math inline">\(x\)</span> and multiplies it
+by a matrix <span class="math inline">\(W\)</span>:</p>
+<p><span class="math display">\[
+f(x)=W\cdot x
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+x=\begin{bmatrix}x_1\\ x_2 \end{bmatrix}
+\qquad
+W = \begin{bmatrix}w_{1,1} &amp; w_{1,2} \\ w_{2,1} &amp; w_{2,2}
+\end{bmatrix}
+\]</span></p>
+<p>Expanding the matrix multiplication, we have:</p>
+<p><span class="math display">\[
+y_1(x_1, x_2) = w_{1,1} x_1 + w_{1,2} x_2
+\]</span> <span class="math display">\[
+y_2(x_1, x_2) = w_{2,1} x_1 + w_{2,2} x_2
+\]</span></p>
+<p>Thus, the Jacobian matrix is:</p>
+<p><span class="math display">\[
+J(x_1, x_2)
+=
+\begin{bmatrix}
+\frac{\partial y_1(x_1,x_2)}{\partial x_1}, &amp; \frac{\partial
+y_1(x_1,x_2)}{\partial x_2} \\
+\frac{\partial y_2(x_1,x_2)}{\partial x_1}, &amp; \frac{\partial
+y_2(x_1,x_2)}{\partial x_2} \\
+\end{bmatrix}
+=
+\begin{bmatrix}w_{1,1} &amp; w_{1,2} \\ w_{2,1} &amp; w_{2,2}
+\end{bmatrix}
+\]</span></p>
+<p>This Jacobian matrix happens to consist of constants.</p>
+<h3 id="example-2.-jacobian-of-xt-w-x">Example 2. Jacobian of <span
+class="math inline">\(x^T W x\)</span></h3>
+<p>Now consider another function:</p>
+<p><span class="math display">\[
+f = x^T W x
+\]</span></p>
+<p>Expanding the matrix multiplication, we have:</p>
+<p><span class="math display">\[
+\begin{aligned}
+f(x_1, x_2)
+&amp;=
+(w_{1,1} x_1 + w_{2,1} x_2) x_1 + (w_{1,2} x_1 + w_{2,2} x_2) x_2
+\\
+&amp;=
+w_{1,1} x_1^2 + (w_{1,2}+w_{2,1})x_1 x_2 + w_{2,2} x_2^2
+\end{aligned}
+\]</span></p>
+<p>The Jacobian matrix is:</p>
+<p><span class="math display">\[
+\begin{aligned}
+J(x_1, x_2)
+&amp;=
+\begin{bmatrix}
+\frac{\partial f(x_1, x_2)}{\partial x_1} &amp;
+\frac{\partial f(x_1, x_2)}{\partial x_2}
+\end{bmatrix}
+\\
+&amp;=
+\begin{bmatrix}
+2 w_{1,1} x_1 + (w_{1,2}+w_{2,1}) x_2 &amp;
+2 w_{2,2} x_2 + (w_{1,2}+w_{2,1}) x_1
+\end{bmatrix}
+\end{aligned}
+\]</span></p>
+<p>This Jacobian consists of functions depending on <span
+class="math inline">\(x_1\)</span> and <span
+class="math inline">\(x_2\)</span>.</p>
+<h2 id="jvp-and-vjp-are-functions">JVP and VJP Are Functions</h2>
+<p>Since the Jacobian matrix is a function of <span
+class="math inline">\(x\)</span>, both JVP and VJP are also
+functions:</p>
+<p><span class="math display">\[\text{jvp}_f(x, v) = J_f(x)\cdot
+v\]</span></p>
+<p><span class="math display">\[\text{vjp}_f(x, v) = v\cdot
+J_f(x)\]</span></p>
+<p>Here, <span class="math inline">\(J_f(x)\)</span> is the matrix of
+partial derivative functions of <span
+class="math inline">\(f\)</span>.</p>
+<h2 id="show-me-the-code">Show Me the Code</h2>
+<p>Given a function <span
+class="math inline">\(f(x_1,\ldots,x_n)\)</span> returns a scalar,
+<code>jax.grad</code> computes its Jacobian:</p>
+<p><span class="math display">\[
+\begin{aligned}
+J(x_1,\ldots,x_n)
+&amp;= f&#39;(x_1,\ldots,x_n)  \\
+&amp;= \left[ \frac{\partial f(x_1,\ldots,x_n)}{\partial x_1}, \ldots,
+\frac{\partial f(x_1,\ldots,x_n)}{\partial x_n} \right]
+\end{aligned}
+\]</span></p>
+<p>Since <span class="math inline">\(f(x_1,\ldots,x_n)\)</span> returns
+a scalar, the Jacobian returned by <code>jax.grad(f)</code> is a row
+vector. Here’s an example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> jax <span class="im">import</span> grad, jacfwd, jacrev</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> jnp.array([<span class="dv">1</span>, <span class="dv">1</span>], dtype<span class="op">=</span>jnp.float32)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> jnp.array([<span class="dv">1</span>, <span class="dv">2</span>], dtype<span class="op">=</span>jnp.float32)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>c <span class="op">=</span> jnp.array([<span class="dv">2</span>, <span class="dv">1</span>], dtype<span class="op">=</span>jnp.float32)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> jnp.array([<span class="dv">2</span>, <span class="dv">2</span>], dtype<span class="op">=</span>jnp.float32)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x: jax.Array) <span class="op">-&gt;</span> jax.Array:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot; f(x_1, x_2) = x_1 * x_2 &quot;&quot;&quot;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x.prod()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(grad(f)(a)) <span class="co"># [1. 1.]</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(grad(f)(b)) <span class="co"># [2. 1.]</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(grad(f)(c)) <span class="co"># [1. 2.]</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(grad(f)(d)) <span class="co"># [2. 2.]</span></span></code></pre></div>
+<p>Note that <code>jax.grad</code> only handle scalar-output functions.
+For instance, calling <code>jax.grad</code> on a function returning a
+vector will raise an error:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x: jax.Array) <span class="op">-&gt;</span> jax.Array:</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;</span> f(x_1, x_2) <span class="op">=</span> [ <span class="dv">11</span> x_1 <span class="op">+</span> <span class="dv">33</span> x_2, <span class="dv">22</span> x_1 <span class="op">+</span> <span class="dv">44</span> x_2 ] <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="st">    w = jnp.array([[11, 22], [33, 44]], dtype=jnp.float32)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">    return w @ x</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">print(jax.grad(f)(x))  # TypeError: Gradient only defined for scalar-output functions.</span></span></code></pre></div>
+<p>In this case, we should use <code>jax.jacfwd</code> or
+<code>jax.jacrev</code> instead of <code>jax.grad</code>.
+<code>jax.jacfwd</code> uses idea behind JVP and <code>jax.jacrev</code>
+uses VJP, but both return very close if not identical results. The
+following code works:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(a))</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(b))</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacrev(f)(c))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacrev(f)(d))</span></code></pre></div>
+<p>All of these <code>print</code> calls display the same output
+because, as shown by Example 1, the Jacobian of <code>f</code> is a
+constant matrix:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>[[<span class="fl">11.</span> <span class="fl">22.</span>]</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a> [<span class="fl">33.</span> <span class="fl">44.</span>]]</span></code></pre></div>
+<p>The following code is for Example 2:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x: jax.Array) <span class="op">-&gt;</span> jax.Array:</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    w <span class="op">=</span> jnp.array([[<span class="dv">11</span>, <span class="dv">22</span>], [<span class="dv">33</span>, <span class="dv">44</span>]], dtype<span class="op">=</span>jnp.float32)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">@</span> w <span class="op">@</span> x</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(a))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(b))</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(c))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jacfwd(f)(d))</span></code></pre></div>
+<p>The JAX funtion <code>jvp</code> takes a function <code>f</code>, the
+value <code>x</code> for calculating <span
+class="math inline">\(f&#39;(x)\)</span>, and <code>v</code> for
+calculating <span class="math inline">\(f&#39;(x)\cdot v\)</span>.</p>
+<p>The JAX function <code>vjp</code> has a slightly different signature.
+It takes the function <code>f</code> and <code>x</code>, and returns
+another function that takes <code>v</code> and returns <span
+class="math inline">\(f&#39;(x)(v)\)</span>.</p>
