@@ -62,7 +62,8 @@ with <span class="math inline">\(y_j\)</span>?</strong></p>
 <p>The Jacobian matrix tells us how changes in <span
 class="math inline">\(x_i\)</span> affect <span
 class="math inline">\(y_j\)</span>. For instance, if we change <span
-class="math inline">\(x_1\)</span> while keeping the other <span
+class="math inline">\(x_1\)</span> by <span
+class="math inline">\(1\)</span> while keeping the other <span
 class="math inline">\(x_i\)</span> values constant, the change in the
 <span class="math inline">\(y_j\)</span> values is:</p>
 <p><span class="math display">\[
@@ -80,6 +81,10 @@ J
 \frac{\partial y_m}{\partial x_1}
 \end{bmatrix}
 \]</span></p>
+<p>This result makes sense becasue each <span
+class="math inline">\(\frac{\partial y_j}{\partial x_1}\)</span> is, by
+its definition, the change to <span class="math inline">\(y_j\)</span>
+due to the change to <span class="math inline">\(x_1\)</span> by 1.</p>
 <p>In general, if each <span class="math inline">\(x_i\)</span> changes
 by <span class="math inline">\(\epsilon_i\)</span>, represented as <span
 class="math inline">\(v=[\epsilon_1,\ldots,\epsilon_n]^T\)</span>, the
@@ -93,7 +98,7 @@ J
 \epsilon_n
 \end{bmatrix}
 \]</span></p>
-<p><strong>To represent the JVP correctly, the Jacobian’s columns must
+<p><strong>To make JVP the above sense, the Jacobian’s columns must
 correspond to <span class="math inline">\(x_i\)</span>.</strong></p>
 <h2 id="the-v-in-vjp">The V in VJP</h2>
 <p>In some situations, such as deep learning, the outputs <span

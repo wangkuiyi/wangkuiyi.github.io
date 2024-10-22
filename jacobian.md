@@ -41,7 +41,7 @@ $$
 
 ## The V in JVP
 
-The Jacobian matrix tells us how changes in $x_i$ affect $y_j$. For instance, if we change $x_1$ while keeping the other $x_i$ values constant, the change in the $y_j$ values is:
+The Jacobian matrix tells us how changes in $x_i$ affect $y_j$. For instance, if we change $x_1$ by $1$ while keeping the other $x_i$ values constant, the change in the $y_j$ values is:
 
 $$
 J
@@ -59,6 +59,8 @@ J
 \end{bmatrix}
 $$
 
+This result makes sense becasue each $\frac{\partial y_j}{\partial x_1}$ is, by its definition, the change to $y_j$ due to the change to $x_1$ by 1.
+
 In general, if each $x_i$ changes by $\epsilon_i$, represented as $v=[\epsilon_1,\ldots,\epsilon_n]^T$, the corresponding change to $y_j$ is:
 
 $$
@@ -71,7 +73,7 @@ J
 \end{bmatrix}
 $$
 
-**To represent the JVP correctly, the Jacobian’s columns must correspond to $x_i$.**
+**To make JVP the above sense, the Jacobian’s columns must correspond to $x_i$.**
 
 ## The V in VJP
 
