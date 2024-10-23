@@ -1,0 +1,189 @@
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<link rel="stylesheet" href="https://jingnanshi.com/static/main.css" />
+<link rel="stylesheet" href="https://jingnanshi.com/static/code.css" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<h1 id="automatic-differentiation-in-python-and-vjp">Automatic
+Differentiation in Python and VJP</h1>
+<center>
+<a href="https://wangkuiyi.github.io/">Yi Wang</a>
+</center>
+<p>MATLAB and Mathematica implements symbolic differentation. It is
+trivial to implement numerical differentiation. Jingnan Shi’s article <a
+href="https://jingnanshi.com/blog/autodiff.html"><em>Automatic
+Differentiation: Forward and Reverse</em></a> compares them with
+automatic differentiation.</p>
+<p>This article focuses on automatic differentation and a concise Python
+implementation using the idea VJP. For a short explanation of VJP and
+JVP, I would recommend my post <a href="jacobian.html"><em>The Jacobian
+in JVP and VJP</em></a>.</p>
+<h2 id="an-example">An Example</h2>
+<p>This Python implementation is a simplified deep learning toolkit.
+Consider an example neural network that computes the following
+expression, it should be able to compute <span
+class="math inline">\(\partial y/\partial x_1\)</span> and <span
+class="math inline">\(\partial y/\partial x_2\)</span> given specific
+values of <span class="math inline">\(x_1=\pi/2\)</span> and <span
+class="math inline">\(x_2=1\)</span>.</p>
+<p><span class="math display">\[
+y(x_1, x_2) = \sin(x_1) \cdot (x_1 + x_2)
+\]</span></p>
+<p>The following figure illustrates the forward and backward passes:</p>
+<center>
+<img src="autodiff.svg" />
+</center>
+<h2 id="the-design">The Design</h2>
+<p>The above figure presents a computation graph. C++ code may use
+pointers for the links in the graph. But for easier memory management,
+we put nodes in an array and use their indices as the pointers. We can
+put this array in a class <code>Tape</code>.</p>
+<p>Except for the node <span class="math inline">\(y=v_3\)</span>, which
+is for annotation, each of the rest nodes in the graph represents an
+operation, so we need a class <code>Op</code>.</p>
+<p>There are four different operations in the graph, so we need to
+derive <code>Sine</code>, <code>Add</code>, <code>Mult</code>, and
+<code>Var</code> from <code>Op</code>, where <code>Var</code> is for
+defining input variables.</p>
+<p>The class <code>Op</code> must have a field <code>value</code>.</p>
+<p>The class <code>Op</code>’s construtor method can take the inputs and
+calculates the <code>value</code> field.</p>
+<p>It is easier to initialize an <code>Op</code> object by calling a
+method of <code>Tape</code>, so this method can append the
+<code>Op</code> instance to the tape. As a result, we need methods
+<code>Tape.var</code>, <code>Tape.sin</code>, <code>Tape.add</code>, and
+<code>Tape.mult</code>.</p>
+<p>In this way, the last instance in the tape is the final output, or
+<span class="math inline">\(v_3\)</span> for the above example.</p>
+<p>The backward pass starts from calling a method of the last
+<code>Op</code> instance. Because the last operation is exactly the
+final output <span class="math inline">\(y\)</span>, so <span
+class="math inline">\(\frac{\partial y}{\partial v_3}\)</span> is 1. As
+explained in <a href="jacobian.html"><em>The Jacobian in JVP and
+VJP</em></a>, <span class="math inline">\(\frac{\partial y}{\partial
+v_3}\)</span> is the <em>v</em> in VJP. So we’d like to add the method
+<code>Op.vjp</code> to implement the backward pass.</p>
+<p>The operation <span class="math inline">\(v_3\)</span> has two
+inputs. So, it’s <code>vjp</code> method should either pass <span
+class="math inline">\(\frac{\partial y}{\partial v_3}\)</span> to each
+one of them, so their <code>vjp</code> method computes <span
+class="math inline">\(\frac{\partial y}{\partial v_3} \frac{\partial
+v_3}{\partial v_1}\)</span> and <span
+class="math inline">\(\frac{\partial y}{\partial v_3} \frac{\partial
+v_3}{\partial v_2}\)</span> respectively, or, the <code>vjp</code>
+method of <span class="math inline">\(v_3\)</span> computes gradients
+for its inputs and saves the results in each of the inputs. The latter
+is easier because the <code>Mult</code> operation itself knows how to
+compute the backward pass for multiplication, or <span
+class="math inline">\(\frac{\partial v_3}{\partial v_1}\)</span> and
+<span class="math inline">\(\frac{\partial v_3}{\partial v_2}\)</span>
+in this example.</p>
+<p>After the computation, <code>Op.vjp</code> needs to pass the results
+to all its input operations. It can do so by calling the
+<code>vjp</code> methods of the input operations.</p>
+<p>It is notable that before computing and back propagate the VJP
+result, the method <code>vjp</code> of <code>op</code> must wait for and
+accumulate gradients from all successive operations who use
+<code>op</code>’s value. For example, the operation <span
+class="math inline">\(x_1\)</span> is used by <span
+class="math inline">\(v_1\)</span> and <span
+class="math inline">\(v_2\)</span>. As a result, it has to wait for and
+accumulate <span class="math inline">\(\frac{\partial y}{\partial v_1}
+\frac{\partial v_1}{\partial x_1}\)</span> from <span
+class="math inline">\(v_1\)</span>’s <code>vjp</code> and <span
+class="math inline">\(\frac{\partial y}{\partial v_2} \frac{\partial
+v_2}{\partial x_1}\)</span> from <span
+class="math inline">\(v_2\)</span>’s <code>vjp</code>.</p>
+<p>In order to know how many gradients an operation needs to wait for,
+we need a field <code>Op.succ</code>. To trace how many it has received,
+we need another field <code>Op.recv</code>.</p>
+<hr />
+<h1 id="automatic-differentiation-in-python-and-vjp-1">Automatic
+Differentiation in Python and VJP</h1>
+<center>
+<a href="https://wangkuiyi.github.io/">Yi Wang</a>
+</center>
+<p>MATLAB and Mathematica implement symbolic differentiation. Numerical
+differentiation is easy to implement. Jingnan Shi’s article <a
+href="https://jingnanshi.com/blog/autodiff.html"><em>Automatic
+Differentiation: Forward and Reverse</em></a> compares these methods
+with automatic differentiation.</p>
+<p>This article focuses on automatic differentiation and presents a
+concise Python implementation using the idea of VJP. For a brief
+explanation of VJP and JVP, I recommend my post <a
+href="jacobian.html"><em>The Jacobian in JVP and VJP</em></a>.</p>
+<h2 id="an-example-1">An Example</h2>
+<p>This Python implementation is a simplified deep learning toolkit.
+Consider a neural network that computes the following expression. It
+should be able to compute <span class="math inline">\(\partial
+y/\partial x_1\)</span> and <span class="math inline">\(\partial
+y/\partial x_2\)</span> for specific values of <span
+class="math inline">\(x_1=\pi/2\)</span> and <span
+class="math inline">\(x_2=1\)</span>.</p>
+<p><span class="math display">\[
+y(x_1, x_2) = \sin(x_1) \cdot (x_1 + x_2)
+\]</span></p>
+<p>The following figure illustrates the forward and backward passes:</p>
+<center>
+<img src="autodiff.svg" />
+</center>
+<h2 id="the-design-1">The Design</h2>
+<p>The above figure presents a computation graph. In C++, you might use
+pointers for the links in the graph. However, for easier memory
+management, we store the nodes in an array and use their indices as
+pointers. We can encapsulate this array in a class called
+<code>Tape</code>.</p>
+<p>Except for the node <span class="math inline">\(y = v_3\)</span>,
+which serves as an annotation, each of the other nodes represents an
+operation. Thus, we need a class <code>Op</code> to represent
+operations.</p>
+<p>There are four different operations in this graph, so we will derive
+<code>Sine</code>, <code>Add</code>, <code>Mult</code>, and
+<code>Var</code> from <code>Op</code>, where <code>Var</code> represents
+the input variables.</p>
+<p>The class <code>Op</code> must have a field <code>value</code>.</p>
+<p>The constructor of the <code>Op</code> class can take inputs and
+compute the <code>value</code> field.</p>
+<p>It is easier to initialize an <code>Op</code> object by calling a
+method of <code>Tape</code>, allowing the method to append the
+<code>Op</code> instance to the tape. As a result, we need methods like
+<code>Tape.var</code>, <code>Tape.sin</code>, <code>Tape.add</code>, and
+<code>Tape.mult</code>.</p>
+<p>In this way, the last instance in the tape is the final output, or
+<span class="math inline">\(v_3\)</span> in the above example.</p>
+<p>The backward pass starts by calling a method on the last
+<code>Op</code> instance. Since the last operation is the final output
+<span class="math inline">\(y\)</span>, <span
+class="math inline">\(\frac{\partial y}{\partial v_3}\)</span> is 1. As
+explained in <a href="jacobian.html"><em>The Jacobian in JVP and
+VJP</em></a>, <span class="math inline">\(\frac{\partial y}{\partial
+v_3}\)</span> is the <em>v</em> in VJP. Thus, we add the method
+<code>Op.vjp</code> to handle the backward pass.</p>
+<p>The operation <span class="math inline">\(v_3\)</span> has two
+inputs. Its <code>vjp</code> method should either pass <span
+class="math inline">\(\frac{\partial y}{\partial v_3}\)</span> to each
+input, allowing their <code>vjp</code> methods to compute <span
+class="math inline">\(\frac{\partial y}{\partial v_3} \frac{\partial
+v_3}{\partial v_1}\)</span> and <span
+class="math inline">\(\frac{\partial y}{\partial v_3} \frac{\partial
+v_3}{\partial v_2}\)</span>, or it should compute the gradients for its
+inputs and store the results directly. The latter approach is easier
+because the <code>Mult</code> operation knows how to compute its
+backward pass, i.e., <span class="math inline">\(\frac{\partial
+v_3}{\partial v_1}\)</span> and <span
+class="math inline">\(\frac{\partial v_3}{\partial v_2}\)</span> in this
+case.</p>
+<p>After computing, <code>Op.vjp</code> needs to propagate the results
+to its input operations by calling their <code>vjp</code> methods.</p>
+<p>It’s important to note that before computing and propagating the VJP
+result, <code>op.vjp</code> must wait for and accumulate gradients from
+all subsequent operations that use <code>op</code>’s value. For
+instance, the operation <span class="math inline">\(x_1\)</span> is used
+by <span class="math inline">\(v_1\)</span> and <span
+class="math inline">\(v_2\)</span>, so it has to accumulate <span
+class="math inline">\(\frac{\partial y}{\partial v_1} \frac{\partial
+v_1}{\partial x_1}\)</span> from <code>v_1.vjp</code> and <span
+class="math inline">\(\frac{\partial y}{\partial v_2} \frac{\partial
+v_2}{\partial x_1}\)</span> from <code>v_2.vjp</code>.</p>
+<p>To track how many gradients an operation needs to wait for, we add a
+field <code>Op.succ</code>. To track how many it has received, we
+introduce another field <code>Op.recv</code>.</p>
