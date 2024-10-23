@@ -1,0 +1,15 @@
+digraph {
+   node [shape=box, style=rounded];
+   x1 [label="x₁ = π/2 \n\n ∂y/∂x₂ \n= ∂y/∂v₁ · ∂v₁/∂x₁ + ∂y/∂v₂ · ∂v₂/∂x₁ \n= v₂ cos(x₁) + v₁ = 1"];
+   x2 [label="x₂ = 1 \n\n ∂y/∂x₂ = ∂y/∂v₂ · ∂v₂/∂x₂ \n= v₁ = 1"];
+   v1 [label="v₁ = sin(x₁) = 1 \n\n ∂y/∂v₁ = ∂y/∂v₃ · ∂v₃/∂v₁ \n= v₂ = π/2 + 1"];
+   v2 [label="v₂ = x₁ + x₂ = π/2 + 1 \n\n ∂y/∂v₂ = ∂y/∂v₃ · ∂v₃/∂v₂ \n= v₁ = 1"];
+   v3 [label="v₃ = x₁ · x₂ = π/2 + 1 \n\n ∂y/∂v₃ = ∂v₃/∂v₃ = 1"];
+   y [label="y=v₃"];
+   x1 -> v1;
+   x1 -> v2;
+   x2 -> v2;
+   v1 -> v3;
+   v2 -> v3;
+   v3 -> y;
+}

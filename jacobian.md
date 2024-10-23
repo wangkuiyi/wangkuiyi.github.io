@@ -1,4 +1,4 @@
-# The Jacobian in JVP and VJP
+# Automatic Differentiation (Part 1): The Jacobian for JVP and VJP
 
 <center>[Yi Wang](https://wangkuiyi.github.io/)</center>
 
