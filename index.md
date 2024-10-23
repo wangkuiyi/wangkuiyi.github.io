@@ -8,4 +8,5 @@
 - [FlashAttention (Part 1): Tiled Matrix Multiplication](tile.html)
 - [FlashAttention (Part 2): Online Softmax](online-softmax.html)
 - [FlashAttention (Part 3.)](flashattention.html)
-- [The Jacobian in JVP and VJP](jacobian.html)
+- [Automatic Differentiation (Part 1): The Jacobian for JVP and VJP](jacobian.html)
+- [Automatic Differentiation (Part 2): Built a Simple Deep Learning Toolkit with VJP](autodiff.html)
