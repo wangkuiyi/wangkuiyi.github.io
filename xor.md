@@ -1,4 +1,4 @@
-# Train an MLP Using Your Brain Rather Than a GPU to Address the XOR Classification Challenge
+# Activations Are Critial for Deep Learning: Train an MLP Using Your Brain to Address the XOR Classification Challenge
 
 This exercise is a great way to understand why activation functions are essential in neural networks.
 
