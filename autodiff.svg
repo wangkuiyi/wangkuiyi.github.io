@@ -63,7 +63,7 @@
 <g id="node5" class="node">
 <title>v3</title>
 <path fill="none" stroke="black" d="M267.25,-132C267.25,-132 150,-132 150,-132 144,-132 138,-126 138,-120 138,-120 138,-84 138,-84 138,-78 144,-72 150,-72 150,-72 267.25,-72 267.25,-72 273.25,-72 279.25,-78 279.25,-84 279.25,-84 279.25,-120 279.25,-120 279.25,-126 273.25,-132 267.25,-132"/>
-<text text-anchor="middle" x="208.62" y="-114.7" font-family="Times,serif" font-size="14.00">v₃ = x₁ · x₂ = π/2 + 1 </text>
+<text text-anchor="middle" x="208.62" y="-114.7" font-family="Times,serif" font-size="14.00">v₃ = v₁ · v₂ = π/2 + 1 </text>
 <text text-anchor="middle" x="208.62" y="-80.7" font-family="Times,serif" font-size="14.00"> ∂y/∂v₃ = ∂v₃/∂v₃ = 1</text>
 </g>
 <!-- v1&#45;&gt;v3 -->
