@@ -10,3 +10,4 @@
 - [FlashAttention (Part 3.)](flashattention.html)
 - [Automatic Differentiation (Part 1): The Jacobian for JVP and VJP](jacobian.html)
 - [Automatic Differentiation (Part 2): Built a Simple Deep Learning Toolkit with VJP](autodiff.html)
+- [Evaluate Hessian-Vector Product Without The Hessian Matrix](hvp.html)
