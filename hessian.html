@@ -1,0 +1,264 @@
+<meta charset="utf-8">
+
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="https://robjhyndman.com/site_libs/clipboard/clipboard.min.js"></script>
+<script src="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<link href="https://fonts.googleapis.com/css?family=Fira+Sans|Merriweather" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+<script type="text/javascript" src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+
+<script src='//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js'></script>
+<script> document.addEventListener('DOMContentLoaded', (event) => {
+                          document.querySelectorAll('pre.src').forEach((el) => {hljs.highlightElement(el);});}); </script>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js", "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        TeX: {extensions: ["AMSmath.js","AMSsymbols.js",  "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"]},
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 1.2,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+
+<style>
+    /* Apply a max-width directly to the body and center it */
+    body {
+      max-width: 800px;    /* Limit the width */
+      margin: 0 auto;      /* Center the content */
+      padding: 20px;       /* Optional padding for better readability */
+      background-color: #f9f9f9; /* Optional background color */
+    }
+</style>
+
+</head>
+<h1
+id="evaluate-hessian-vector-product-without-the-hessian-matrix">Evaluate
+Hessian-Vector Product Without The Hessian Matrix</h1>
+<center>
+<a href="https://wangkuiyi.github.io/">Yi Wang</a>
+</center>
+<p>The <a
+href="https://jax.readthedocs.io/en/latest/notebooks/autodiff_cookbook.html#hessian-vector-products-with-grad-of-grad">JAX
+documentation</a> provides a concise one-liner to compute the
+Hessian-vector product (HVP) of a scalar-valued function <span
+class="math inline">\(f(x)\)</span>. This method is highly efficient and
+avoids the need to store the potentially large Hessian matrix.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> hvp(f, x, v):</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> jax.grad(<span class="kw">lambda</span> x: jax.vdot(jax.grad(f)(x), v))(x)</span></code></pre></div>
+<p>The mathematical explanation is succinct and uses higher-order
+function annotations:</p>
+<p><span class="math display">\[
+\partial^2 f(x) \cdot v =
+\partial[x \mapsto \partial f(x) \cdot v]
+\]</span></p>
+<p>Here is its representation in standard calculus notation:</p>
+<p><span class="math display">\[
+\frac{\partial^2 f(x)}{\partial x} \cdot v
+=
+\frac{\partial \left( \frac{\partial f(x)}{\partial x} \cdot v
+\right)}{\partial x}
+\]</span></p>
+<p>In this equation, <span class="math inline">\(\frac{\partial
+f(x)}{\partial x}\)</span> is the <a href="jacobian.html">Jacobian</a>
+and <span class="math inline">\(\frac{\partial f(x)}{\partial x} \cdot
+v\)</span> is the JVP function that depends on <span
+class="math inline">\(x\)</span> and <span
+class="math inline">\(v\)</span>.</p>
+<p>The equation states that the derivative of the JVP with respect to
+<span class="math inline">\(x\)</span> is the HVP. To see why this
+holds, we start with the definitions of the Jacobian and Hessian for a
+scalar-valued function <span class="math inline">\(f(x)\)</span>.</p>
+<h2 id="hvp-by-definition">HVP By Definition</h2>
+<p>Since <span class="math inline">\(f(x)\)</span> is scalar-valued, its
+Jacobian is a function that returns a row vector over <span
+class="math inline">\(x=\{x_1,\ldots,x_n\}\)</span>. An equivalent
+intepretation of the Jacobian is a row vector of partial derivative
+functions:</p>
+<p><span class="math display">\[
+J_f(x) =
+\begin{bmatrix}
+\frac{\partial f(x)}{\partial x_1}, \ldots, \frac{\partial
+f(x)}{\partial x_n}
+\end{bmatrix}
+\]</span></p>
+<p>The Hessian is the derivative, also a function, of the Jacobian with
+respect to each variable in <span
+class="math inline">\(\{x_1,\ldots,x_n\}\)</span>. Similar to the
+Jacobian, the Hessian could be interpeted as a function that returns a
+matrix of values, or equivalently, a matrix of functions, each of which
+returns a single value.</p>
+<p><span class="math display">\[
+H_f(x) =
+\begin{bmatrix}
+\frac{\partial^2 f(x)}{\partial x_1 \partial x_1}, &amp; \ldots, &amp;
+\frac{\partial^2 f(x)}{\partial x_n \partial x_1}  \\
+\vdots                              &amp; \ddots, &amp; \vdots \\
+\frac{\partial^2 f(x)}{\partial x_1 \partial x_n}, &amp; \ldots, &amp;
+\frac{\partial^2 f(x)}{\partial x_n \partial x_n}  \\
+\end{bmatrix}
+\]</span></p>
+<p>The HVP of <span class="math inline">\(f(x)\)</span> is a function
+that takes two vectors, <span class="math inline">\(x\)</span> and <span
+class="math inline">\(v\)</span>, and returns a matrix:</p>
+<p><span class="math display">\[
+\text{HVP}_f(x)
+=
+H_f(x) \cdot v
+=
+\begin{bmatrix}
+\frac{\partial^2 f(x)}{\partial x_1 \partial x_1}, &amp; \ldots, &amp;
+\frac{\partial^2 f(x)}{\partial x_n \partial x_1}  \\
+\vdots                              &amp; \ddots, &amp; \vdots \\
+\frac{\partial^2 f(x)}{\partial x_1 \partial x_n}, &amp; \ldots, &amp;
+\frac{\partial^2 f(x)}{\partial x_n \partial x_n}  \\
+\end{bmatrix}
+\cdot
+\begin{bmatrix}
+v_1 \\
+\vdots \\
+v_n
+\end{bmatrix}
+=
+\begin{bmatrix}
+\sum_i \frac{\partial^2 f(x)}{\partial x_i \partial x_1} v_i \\
+\vdots \\
+\sum_i \frac{\partial^2 f(x)}{\partial x_i \partial x_n} v_i
+\end{bmatrix}
+\]</span></p>
+<h2 id="hvp-as-derivative-of-jvp">HVP as Derivative of JVP</h2>
+<p>The JVP function of <span class="math inline">\(f(x)\)</span> returns
+a vector <span class="math inline">\(J_f(x)\cdot v\)</span>:</p>
+<p><span class="math display">\[
+\text{JVP}_f(x, v)
+= J_f(x)\cdot v
+=
+\sum_i \frac{\partial f(x)}{\partial x_i} v_i
+\]</span></p>
+<p>The derivative of <span
+class="math inline">\(\text{JVP}_f(x,v)\)</span> with respect to <span
+class="math inline">\(x\)</span> is:</p>
+<p><span class="math display">\[
+\begin{bmatrix}
+\frac{\partial \sum_i \frac{\partial f(x)}{\partial x_i} v_i}{\partial
+x_1} \\
+\vdots \\
+\frac{\partial \sum_i \frac{\partial f(x)}{\partial x_i} v_i}{\partial
+x_n} \\
+\end{bmatrix}
+=
+\begin{bmatrix}
+\sum_i  \frac{\partial^2 f(x)}{\partial x_i \partial x_1} v_i \\
+\vdots \\
+\sum_i  \frac{\partial^2 f(x)}{\partial x_i \partial x_1} v_n \\
+\end{bmatrix}
+\]</span></p>
+<p>This result aligns precisely with the definition of the HVP.</p>
+<h2 id="an-example">An Example</h2>
+<p>JAX provides the function <code>jax.jvp</code>, a generalized form of
+<code>jnp.vdot(jax.grad(f), v)</code> capable of handling input
+functions that returns multiple values. The following example
+demonstrates how to define <code>hvp</code> using
+<code>jax.jvp</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> hvp(f, x, v):</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> jax.grad(<span class="kw">lambda</span> x: jnp.vdot(jax.grad(f)(x), v))(x)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> jnp.sin(x).<span class="bu">sum</span>()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>x, v <span class="op">=</span> jnp.array([<span class="fl">0.0</span>, <span class="fl">1.0</span>]), jnp.array([<span class="fl">10.0</span>, <span class="fl">10.0</span>])</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hvp(f, x, v))</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>primal, tangent <span class="op">=</span> jax.jvp(f, (x,), (v,))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> tangent <span class="op">==</span> jnp.vdot(jax.grad(f)(x), v)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> hvp(f, x, v):</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> jax.grad(<span class="kw">lambda</span> x: jax.jvp(f, (x,), (v,))[<span class="dv">1</span>])(x)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hvp(f, jnp.array([<span class="fl">0.0</span>, <span class="fl">1.0</span>]), jnp.array([<span class="fl">10.0</span>, <span class="fl">10.0</span>])))</span></code></pre></div>
