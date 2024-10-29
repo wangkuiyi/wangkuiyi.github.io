@@ -293,4 +293,4 @@ print(jacfwd(f)(d))
 
 The JAX funtion `jvp` takes a function `f`, the value `x` for calculating $f'(x)$, and `v` for calculating $f'(x)\cdot v$.
 
-The JAX function `vjp` has a slightly different signature. It takes the function `f` and `x`, and returns another function that takes `v` and returns $f'(x)(v)$.
+The JAX function `vjp` has a slightly different signature. It takes the function `f` and `x`, and returns another function that takes `v` and returns $v\cdot f'(x)$.
