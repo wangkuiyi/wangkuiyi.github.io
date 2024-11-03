@@ -1,0 +1,286 @@
+<meta charset="utf-8">
+
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="https://robjhyndman.com/site_libs/clipboard/clipboard.min.js"></script>
+<script src="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<link href="https://fonts.googleapis.com/css?family=Fira+Sans|Merriweather" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+<script type="text/javascript" src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+
+<script src='//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js'></script>
+<script> document.addEventListener('DOMContentLoaded', (event) => {
+                          document.querySelectorAll('pre.src').forEach((el) => {hljs.highlightElement(el);});}); </script>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js", "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        TeX: {extensions: ["AMSmath.js","AMSsymbols.js",  "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"]},
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 1.2,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+
+<style>
+    /* Apply a max-width directly to the body and center it */
+    body {
+      max-width: 800px;    /* Limit the width */
+      margin: 0 auto;      /* Center the content */
+      padding: 20px;       /* Optional padding for better readability */
+      background-color: #f9f9f9; /* Optional background color */
+    }
+</style>
+
+</head>
+<h1 id="decipher-jaxs-tracing-and-jit-compilation">Decipher JAX’s
+Tracing and JIT Compilation</h1>
+<p>JAX provides JIT compilation through the <code>jax.jit</code> API, as
+shown in the following example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>fsin <span class="op">=</span> jax.jit(jnp.sin)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> jnp.linspace(<span class="dv">0</span>, <span class="fl">1.0</span>, <span class="dv">5</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(jnp.array_equal(jnp.sin(x), fsin(x)))</span></code></pre></div>
+<p>This example may lead users to believe that
+<code>jax.jit(jnp.sin)</code> compiles and returns a “faster” version of
+<code>jnp.sin</code>. However, in reality, the first call to
+<code>fsin</code> triggers the actual compilation.</p>
+<p>This misconception can lead to further confusion about the code’s
+behavior. For example, users might assume that jax.jit(jnp.sin) is
+time-consuming due to compilation. However, it is the call to
+<code>fsin(x)</code> that initiates the compilation and thus takes
+significant time.</p>
+<p>More importantly, this misconception may prevent users from
+understanding JAX’s requirement for fixed-shape input arrays during
+compilation. The call <code>jax.jit(jnp.sin)</code> alone does not
+involve any input arrays, which is why the actual compilation happens
+only when <code>fsin</code> is called with an input array.</p>
+<h2 id="compile-and-cache">Compile and Cache</h2>
+<p>The following example demonstrates that the initial call to a
+function decorated with <code>jax.jit</code> triggers the time-consuming
+compilation process, while subsequent calls execute much faster due to
+caching.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> jnp.linspace(<span class="fl">0.</span>, <span class="fl">1.</span>, <span class="dv">1000</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time jax.jit(jnp.sin)(x).block_until_ready()  <span class="co"># 33.6 ms</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time jax.jit(jnp.sin)(x).block_until_ready()  <span class="co"># 852 µs</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time jax.jit(jnp.sin)(x).block_until_ready()  <span class="co"># 910 µs</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time jax.jit(jnp.sin)(x).block_until_ready()  <span class="co"># 891 µs</span></span></code></pre></div>
+<h2 id="timing-asynchronous-operations">Timing Asynchronous
+Operations</h2>
+<p>In the example above, calls to <a
+href="https://github.com/jax-ml/jax/blob/7bc026e496ebe49d54d6578746dd9c9beaed2592/jax/_src/array.py#L597"><code>block_until_ready</code></a>
+ensure that the results are fully computed. According to the JAX
+documentation on <a
+href="https://jax.readthedocs.io/en/latest/async_dispatch.html">Asynchronous
+Dispatch</a>, <code>jax.Array</code> is a future – a placeholder for a
+value that will be computed on an accelerator device but may not be
+available immediately. Calling <code>block_until_ready</code> forces the
+program to wait for the execution of <code>jax.jit(jnp.sin)</code> to
+complete and return the result.</p>
+<p>Asynchronous dispatch is useful because it enables Python programs to
+enqueue substantial amounts of work for the accelerator. MLX adopts a
+similar design. To ensure an array <code>x</code> is ready in MLX, you
+can call <code>mx.eval(x)</code>.</p>
+<h2 id="tracing-with-jax.make_jaxpr">Tracing with
+<code>jax.make_jaxpr</code></h2>
+<p><a
+href="https://jax.readthedocs.io/en/latest/notebooks/thinking_in_jax.html#jit-mechanics-tracing-and-static-variables">JAX
+documentation</a> mentions that JIT uses <code>jax.make_jaxpr</code> to
+“trace” Python code and produce an intermediate representation called
+JAXPR. However, it does not reveal details about
+<code>make_jaxpr</code>. So I crafted the following example allows a
+peek into the hole.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(x, y) <span class="op">-&gt;</span> jax.Array:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;type(x):&quot;</span>, <span class="bu">type</span>(x))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;x:&quot;</span>, x)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;type(y):&quot;</span>, <span class="bu">type</span>(y))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;y:&quot;</span>, y)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> jnp.dot(x <span class="op">+</span> <span class="dv">1</span>, y <span class="op">+</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>The normal way to call this function is to pass in two arrays:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> jnp.array([<span class="fl">1.0</span>, <span class="fl">2.0</span>])</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> jnp.array([<span class="fl">1.0</span>, <span class="fl">2.0</span>])</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(f(x, y))</span></code></pre></div>
+<p>The function <code>f</code> prints the type and value of
+<code>x</code> and <code>y</code>, as well as the final result
+<code>13</code>.</p>
+<pre class="text"><code>type(x): &lt;class &#39;jaxlib.xla_extension.ArrayImpl&#39;&gt;
+x: [1. 2.]
+type(y): &lt;class &#39;jaxlib.xla_extension.ArrayImpl&#39;&gt;
+y: [1. 2.]
+13.0</code></pre>
+<p>Now let us check what <code>jax.make_jaxpr</code> returns:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ff <span class="op">=</span> jax.make_jaxpr(f)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;type(ff):&quot;</span>, <span class="bu">type</span>(ff))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;ff:&quot;</span>, ff)</span></code></pre></div>
+<p>It returns a function:</p>
+<pre class="text"><code>type(ff): &lt;class &#39;function&#39;&gt;
+ff: &lt;function make_jaxpr(f) at 0x10a06af80&gt;</code></pre>
+<p>Let us try calling the function:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> ff(x, y)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;type(z):&quot;</span>, <span class="bu">type</span>(z))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;z:&quot;</span>, z)</span></code></pre></div>
+<p>This prints the type and value of <code>x</code> and <code>y</code>
+as well as the returned value:</p>
+<pre class="text"><code>type(x): &lt;class &#39;jax._src.interpreters.partial_eval.DynamicJaxprTracer&#39;&gt;
+x: Traced&lt;ShapedArray(float32[2])&gt;with&lt;DynamicJaxprTrace(level=1/0)&gt;
+type(y): &lt;class &#39;jax._src.interpreters.partial_eval.DynamicJaxprTracer&#39;&gt;
+y: Traced&lt;ShapedArray(float32[2])&gt;with&lt;DynamicJaxprTrace(level=1/0)&gt;
+type(z): &lt;class &#39;jax._src.core.ClosedJaxpr&#39;&gt;
+z: { lambda ; a:f32[2] b:f32[2]. let
+    c:f32[2] = add a 1.0
+    d:f32[2] = add b 1.0
+    e:f32[] = dot_general[
+      dimension_numbers=(([0], [0]), ([], []))
+      preferred_element_type=float32
+    ] c d
+  in (e,) }</code></pre>
+<p>We passed in two arrays to <code>ff</code>. However, the calls to
+<code>print</code> by <code>f</code> show that <code>x</code> and
+<code>y</code> are of type <code>DynamicJaxprTracer</code>, not arrays.
+Obviously, the function <code>ff</code>, created by
+<code>jax.make_jaxpr</code>, calls <code>f</code>, which is why the
+<code>print</code> calls in <code>f</code> work. But, before calling
+<code>f</code>, <code>ff</code> converts the input arrays into
+<code>DynamicJaxprTracer</code>.</p>
+<p>The <code>DynamicJaxprTracer</code> contains only the
+<code>ShapedArray</code> with <code>float32</code> dtype and shape
+<code>[2]</code>; the actual data is missing. That is the purpose of
+tracing: capturing the dtype and shape of arrays but not the
+content.</p>
+<p>As expected, the return value is not an array but a representation of
+the operations within <code>f</code>. For this exmaple, it is a short
+program that calls the <a
+href="https://openxla.org/xla/operation_semantics#dotgeneral">XLA
+operation <code>dot_general</code></a>.</p>
+<p>From this, we can infer how <code>jax.make_jaxpr</code> works. It
+returns a function that calls <code>f</code> with arguments converted to
+<code>DynamicJaxprTracer</code> instances, capturing dtype and shape
+while allowing functions like jnp.dot to treat them like arrays. Thanks
+to Python’s support of <a
+href="https://en.wikipedia.org/wiki/Duck_typing">duck-typing</a>, JAX
+functions can operate on tracers like they are operating arrays.</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_jaxpr(f):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> ff(<span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        args, kwargs <span class="op">=</span> convert_arrays_to_tracer(args, kwargs)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> f(args, kwargs)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ff</span></code></pre></div>
+<h2 id="compile-the-trace">Compile the Trace</h2>
+<p>Now, let us hypothesize how <code>jax.jit</code> work. According to
+the initial example, <code>jax.jit</code> takes a function
+<code>f</code> as input. If <code>f</code> has already been compiled,
+<code>jax.jit</code> should return the cached result. If not,
+<code>jax.jit</code> should return a function <code>ff</code> that runs
+the identical operations as <code>f</code>. When called with arguments
+like <code>x</code> and <code>y</code>, <code>ff</code> would:</p>
+<ol type="1">
+<li>trace <code>f</code> given <code>x</code> and <code>y</code>,</li>
+<li>call XLA to compile the tracing result,</li>
+<li>cache the compiled result, and</li>
+<li>calls the result with <code>x</code> and <code>y</code>.</li>
+</ol>
+<p>The source code of <code>jax.jit</code> may look something like the
+following:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> jit(f):</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>   <span class="cf">if</span> ff <span class="op">:=</span> cached.of(f):</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> ff</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>       </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>   <span class="kw">def</span> trigger(<span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>       ff <span class="op">=</span> jax.make_jaxpr(f)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>       trace <span class="op">=</span> f(args, kwargs)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>       compiled <span class="op">=</span> compile_using_xla(trace)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>       cached.add(compiled)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> compiled(args, kwargs)</span></code></pre></div>
+<h2 id="conclusion">Conclusion</h2>
+<p>I haven’t read the JAX codebase to verify if my hypothesis is
+correct. But I plan to. :-)</p>
