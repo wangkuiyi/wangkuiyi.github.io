@@ -138,14 +138,14 @@ The source code of `jax.jit` may look something like the following:
 
 ```python
 def jit(f):
-   if ff := cached.of(f):
+   if ff := cache.of(f):
        return ff
        
    def trigger(*args, **kwargs):
        ff = jax.make_jaxpr(f)
        trace = f(args, kwargs)
        compiled = compile_using_xla(trace)
-       cached.add(compiled)
+       cache.add(compiled)
        return compiled(args, kwargs)
    return tigger
 ```
