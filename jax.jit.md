@@ -147,6 +147,7 @@ def jit(f):
        compiled = compile_using_xla(trace)
        cached.add(compiled)
        return compiled(args, kwargs)
+   return tigger
 ```
 
 ## Conclusion

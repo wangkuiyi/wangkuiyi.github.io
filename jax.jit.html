@@ -280,7 +280,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a h
 <span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>       trace <span class="op">=</span> f(args, kwargs)</span>
 <span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>       compiled <span class="op">=</span> compile_using_xla(trace)</span>
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>       cached.add(compiled)</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> compiled(args, kwargs)</span></code></pre></div>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>       <span class="cf">return</span> compiled(args, kwargs)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>   <span class="cf">return</span> tigger</span></code></pre></div>
 <h2 id="conclusion">Conclusion</h2>
 <p>I haven’t read the JAX codebase to verify if my hypothesis is
 correct. But I plan to. :-)</p>
