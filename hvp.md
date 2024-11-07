@@ -100,7 +100,7 @@ $$
 \begin{bmatrix}
 \sum_i  \frac{\partial^2 f(x)}{\partial x_i \partial x_1} v_i \\
 \vdots \\
-\sum_i  \frac{\partial^2 f(x)}{\partial x_i \partial x_1} v_n \\
+\sum_i  \frac{\partial^2 f(x)}{\partial x_i \partial x_n} v_i \\
 \end{bmatrix}
 $$
 
