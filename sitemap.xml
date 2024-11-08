@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>deep_learning_toolkits.md</loc></url>
-<url><loc>roofline.html</loc></url>
-<url><loc>xor.html</loc></url>
-<url><loc>positional_encoding.html</loc></url>
-<url><loc>rope.html</loc></url>
-<url><loc>tile.html</loc></url>
-<url><loc>online-softmax.html</loc></url>
-<url><loc>flashattention.html</loc></url>
-<url><loc>jacobian.html</loc></url>
-<url><loc>autodiff.html</loc></url>
-<url><loc>hvp.html</loc></url>
-<url><loc>jax.jit.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/deep_learning_toolkits.md</loc></url>
+<url><loc>https://wangkuiyi.github.io/roofline.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/xor.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/positional_encoding.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/rope.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/tile.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/online-softmax.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/flashattention.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/jacobian.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/autodiff.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/hvp.html</loc></url>
+<url><loc>https://wangkuiyi.github.io/jax.jit.html</loc></url>
 </urlset>
 
 
