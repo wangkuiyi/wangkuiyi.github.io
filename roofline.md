@@ -12,7 +12,7 @@ Before an application could start computing, it often needs to load the data. Si
 
 The above two limits make the peak performance a roofline-shaped curve:
 
-$$ \max(\beta I, \pi) $$
+$$ \min(\beta I, \pi) $$
 
 The term $\beta I$ depends on $I$, so we plot this relationship on a 2-dimensional graph, where the x-axis represents *arithmetic intensity* $I$ and the y-axis represents performance in FLOPS.
 
@@ -162,7 +162,7 @@ plt.grid(True, which="both", ls="--", linewidth=0.5)
 plt.show()
 ```
 
-The matrix size $n$ goes from $1$ up to $2^15$.  The arithmatic intensity `aint.append(N / 3.0)` comes from the previous derivation.  The performance, $2N^3/d$ FLOPS, where $d$ is the duration of each operation, is from the fact that during the period of execution, the chip runs $n^3$ elementwise multiplications and $n^3$ additions.
+The matrix size $n$ goes from $1$ up to $2^{15}$.  The arithmatic intensity `aint.append(N / 3.0)` comes from the previous derivation.  The performance, $2N^3/d$ FLOPS, where $d$ is the duration of each operation, is from the fact that during the period of execution, the chip runs $n^3$ elementwise multiplications and $n^3$ additions.
 
 ## Next Steps
 

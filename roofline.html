@@ -1,4 +1,4 @@
-<meta charset="utf-8">
+<meta charset="utf-8" />
 
 <style>
 code{white-space: pre-wrap;}
@@ -141,7 +141,7 @@ loaded or saved byte, the maximum achievable performance is <span
 class="math inline">\(\beta I\)</span>.</p>
 <p>The above two limits make the peak performance a roofline-shaped
 curve:</p>
-<p><span class="math display">\[ \max(\beta I, \pi) \]</span></p>
+<p><span class="math display">\[ \min(\beta I, \pi) \]</span></p>
 <p>The term <span class="math inline">\(\beta I\)</span> depends on
 <span class="math inline">\(I\)</span>, so we plot this relationship on
 a 2-dimensional graph, where the x-axis represents <em>arithmetic
@@ -360,7 +360,7 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div>
 <p>The matrix size <span class="math inline">\(n\)</span> goes from
 <span class="math inline">\(1\)</span> up to <span
-class="math inline">\(2^15\)</span>. The arithmatic intensity
+class="math inline">\(2^{15}\)</span>. The arithmatic intensity
 <code>aint.append(N / 3.0)</code> comes from the previous derivation.
 The performance, <span class="math inline">\(2N^3/d\)</span> FLOPS,
 where <span class="math inline">\(d\)</span> is the duration of each
