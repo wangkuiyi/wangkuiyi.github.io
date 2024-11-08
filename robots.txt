@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.example.com/sitemap.txt
+Sitemap: https://wangkuiyi.github.io/sitemap.xml
