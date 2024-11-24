@@ -1,4 +1,4 @@
-# A Minimalist HTTP Server Using `asyncio`
+# A Minimalist HTTP Server Using asyncio
 
 A common misconception about Python is that it’s a low-performance language and unsuitable for server development. However, this notion is contradicted by the fact that renowned large language model serving systems are predominantly written in Python, including [vLLM](https://github.com/vllm-project/vllm/blob/1c445dca51a877ac6a5b7e03ecdb73e0e34d139e/vllm/entrypoints/api_server.py#L14), [SGLang](https://github.com/sgl-project/sglang/blob/84a1698d67d63911e8d1f55c979b00d65d84dc37/python/sglang/srt/server.py#L39), and [JetStream](https://github.com/AI-Hypercomputer/JetStream/blob/d462ca9bbc55531bbe785203cb076e7797250f2a/jetstream/entrypoints/http/api_server.py#L24), all of which utilize a high-level server framework called `fastapi`.
 
