@@ -146,8 +146,8 @@ def tearDown():                                def setUp(self):
 @parametrize(                                      print(&quot;tearDown&quot;)
     &quot;x, y, z&quot;, [(1, 2, 3), (4, 5, 9)]
 )                                              @parameters((1, 2, 3), (4, 5, 9))
-def test_a(x, y, z):                           def test_a(self, a, b, c):
-    setUp()                                        print(&quot;test_a&quot;, a, b, c)
+def test_a(x, y, z):                           def test_a(self, x, y, z):
+    setUp()                                        print(&quot;test_a&quot;, x, y, z)
     print(&quot;test_a&quot;, x, y, z)
     tearDown()                                 def test_b(self):
                                                    print(&quot;test_b&quot;)
