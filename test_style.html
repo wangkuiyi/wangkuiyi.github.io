@@ -113,34 +113,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 </head>
-<h1
-id="absl-test-or-non-framework-a-slight-difference-of-pytorch-and-google-coding-style">Absl
-Test or Non-Framework: A Slight Difference of PyTorch and Google Coding
-Style</h1>
-<p>When I left Google in 2010, Python was not as hot as it is now,
-probably because deep learning had not been something everyone talsk
-about. However, I missed those <em>standard</em> libraries Google had
-for C++ programmers. During the 12 years since then, I had been cheering
-for Google open-sourcing glog, gtest, and other parts of the standard
-libraries. I have been imagining that some standard libraries must have
-been forging inside Google for Python, until I started reading some
-newer ex-Googler’s code, which heavily relies on a package know as
-absl-py.</p>
-<p><code>absl-py</code> is a collect of frequently used Python packages
-that independently covers many use cases, and unit testing is one of
-them. My previous work on PyTorch relies on pytest, whose design
-principle seems to be Occam’s Razor. An evidence is that
-<code>pytest</code> does not provide base classes like
-<code>unittest.TestCase</code>, which allows users to define methods
-like <code>setUp</code> and <code>tearDown</code> that will be called
-before and after the run of each test. Instead, it depends on users to
-decide how to define these methods and how to call them. Similarly,
-<code>pytest</code> does not provide parameterization of test
-parameters. If you want it, you use a third-party library or write your
-own. However, absl provides a testing framework that defines how
-<code>setUp</code> and <code>tearDown</code> should be defined and
-extends <code>unittest.TestCase</code> and adds capabilities of
-parametrization.</p>
+<h1 id="unit-test-library-or-framework">Unit Test Library Or
+Framework?</h1>
+<p>When I left Google in 2010, I missed the standard libraries that
+Google had for C++ programmers. I was happy when Google open-sourced
+glog, gtest, and other libraries. Recently, I learned absl-py, a
+collection of frequently used Python libraries that Google has
+open-sourced, by reading the code of some newer ex-Googlers.</p>
+<p>Part of absl-py focuses on unit testing. My previous work involved
+PyTorch, which utilized pytest, a minimalist Python unit test library,
+in contrast to Python’s standard unittest framework. Unlike
+<code>unittest</code>, which provides the base class
+<code>unittest.TestCase</code> that necessitates users to define methods
+like <code>setUp</code> and <code>tearDown</code> and automatically
+calls them before and after each test execution, <code>pytest</code>
+lacks such a base class. Instead, it relies on users to define these
+methods and manually call them. While <code>pytest</code> offers
+parameterization of test parameters, it also provides the flexibility to
+incorporate third-party options. On the other hand, absl-py provides a
+framework that extends <code>unittest.TestCase</code>.</p>
 <pre><code>from pytest.mark import parametrize        from absl.testing.parameterized import (
                                                TestCase,
                                                parameters,
