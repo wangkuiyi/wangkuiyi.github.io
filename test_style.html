@@ -1,0 +1,166 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="https://robjhyndman.com/site_libs/clipboard/clipboard.min.js"></script>
+<script src="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<link href="https://fonts.googleapis.com/css?family=Fira+Sans|Merriweather" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+<script type="text/javascript" src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+
+<script src='//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js'></script>
+<script> document.addEventListener('DOMContentLoaded', (event) => {
+                          document.querySelectorAll('pre.src').forEach((el) => {hljs.highlightElement(el);});}); </script>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js", "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        TeX: {extensions: ["AMSmath.js","AMSsymbols.js",  "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"]},
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 1.2,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+
+<style>
+    /* Apply a max-width directly to the body and center it */
+    body {
+      max-width: 800px;    /* Limit the width */
+      margin: 0 auto;      /* Center the content */
+      padding: 20px;       /* Optional padding for better readability */
+      background-color: #f9f9f9; /* Optional background color */
+    }
+</style>
+
+</head>
+<h1
+id="absl-test-or-non-framework-a-slight-difference-of-pytorch-and-google-coding-style">Absl
+Test or Non-Framework: A Slight Difference of PyTorch and Google Coding
+Style</h1>
+<p>When I left Google in 2010, Python was not as hot as it is now,
+probably because deep learning had not been something everyone talsk
+about. However, I missed those <em>standard</em> libraries Google had
+for C++ programmers. During the 12 years since then, I had been cheering
+for Google open-sourcing glog, gtest, and other parts of the standard
+libraries. I have been imagining that some standard libraries must have
+been forging inside Google for Python, until I started reading some
+newer ex-Googler’s code, which heavily relies on a package know as
+absl-py.</p>
+<p><code>absl-py</code> is a collect of frequently used Python packages
+that independently covers many use cases, and unit testing is one of
+them. My previous work on PyTorch relies on pytest, whose design
+principle seems to be Occam’s Razor. An evidence is that
+<code>pytest</code> does not provide base classes like
+<code>unittest.TestCase</code>, which allows users to define methods
+like <code>setUp</code> and <code>tearDown</code> that will be called
+before and after the run of each test. Instead, it depends on users to
+decide how to define these methods and how to call them. Similarly,
+<code>pytest</code> does not provide parameterization of test
+parameters. If you want it, you use a third-party library or write your
+own. However, absl provides a testing framework that defines how
+<code>setUp</code> and <code>tearDown</code> should be defined and
+extends <code>unittest.TestCase</code> and adds capabilities of
+parametrization.</p>
+<pre><code>from pytest.mark import parametrize        from absl.testing.parameterized import (
+                                               TestCase,
+                                               parameters,
+def setUp():                               )
+    print(&quot;setUp&quot;)
+
+                                           class MyTestCase(TestCase):
+def tearDown():                                def setUp(self):
+    print(&quot;tearDown&quot;)                              print(&quot;setup&quot;)
+
+                                               def tearDown(self):
+@parametrize(                                      print(&quot;tearDown&quot;)
+    &quot;x, y, z&quot;, [(1, 2, 3), (4, 5, 9)]
+)                                              @parameters((1, 2, 3), (4, 5, 9))
+def test_a(x, y, z):                           def test_a(self, a, b, c):
+    setUp()                                        print(&quot;test_a&quot;, a, b, c)
+    print(&quot;test_a&quot;, x, y, z)
+    tearDown()                                 def test_b(self):
+                                                   print(&quot;test_b&quot;)
+def test_b():
+    setUp()
+    print(&quot;test_b&quot;)
+    tearDown()</code></pre>
