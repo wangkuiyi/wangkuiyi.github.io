@@ -3,23 +3,23 @@ import jax.numpy as jnp
 from typing import Tuple
 
 d = 8  # hidden dim of llm
-d1 = 4  # hidden dim of rnn
-l = 2  # number of tokens drawn from rnn after the one from llm
-w = 3  # beam width
+h = 4  # hidden dim of rnn
+l = 3  # number of tokens drawn from rnn after the one from llm
+w = 5  # beam width
 b = 2  # batch size
 
 
 def rnn_drafter(llm_state, rnn_state, input_token) -> Tuple[jax.Array, jax.Array]:
     """[d], [d'], [] -> [d'], []"""
-    print(f"\ninput_token=\n{input_token}")
     print(f"\nrnn_state=\n{rnn_state}")
-    return rnn_state * 2, input_token + 1
+    rnn_state = rnn_state + input_token
+    return rnn_state, input_token + rnn_state.sum()
 
 
 def sample_seq(llm_state, llm_token) -> jax.Array:
     """[d'], [] -> [l]"""
     token = llm_token
-    rnn_state = jnp.zeros((d1,))
+    rnn_state = jnp.zeros((h,))
     seq = jnp.array([token], dtype=jnp.int32)
     for _ in range(l):
         rnn_state, token = rnn_drafter(llm_state, rnn_state, token)
@@ -37,6 +37,19 @@ def test_sample_beam():
     print(jax.vmap(sample_seq, in_axes=(None, 0), out_axes=0)(llm_state, llm_token))
 
 
+def test_sample_beam_batched():
+    llm_state, rnn_state = (
+        jnp.zeros((b, d)),
+        jnp.zeros((b, w, h)),
+    )
+    llm_token = jnp.tile(jnp.arange(0, w * 100, 100), (b, 1))
+    print(
+        jax.vmap(jax.vmap(sample_seq, in_axes=(None, 0), out_axes=0), in_axes=(0, 0), out_axes=0)(
+            llm_state, llm_token
+        )
+    )
+
+
 def sample_seq_no_local_var(llm_state, rnn_state, llm_token) -> jax.Array:
     """[d'], [d], [] -> [l]"""
     token = llm_token
@@ -50,7 +63,7 @@ def sample_seq_no_local_var(llm_state, rnn_state, llm_token) -> jax.Array:
 def test_sample_beam_no_local_var():
     llm_state, rnn_state, llm_token = (
         jnp.zeros((d,)),
-        jnp.zeros((w, d1)),
+        jnp.zeros((w, h)),
         jnp.arange(0, w * 100, 100),
     )
     print(
@@ -63,7 +76,7 @@ def test_sample_beam_no_local_var():
 def test_sample_beam_no_local_var_batched():
     llm_state, rnn_state = (
         jnp.zeros((b, d)),
-        jnp.zeros((b, w, d1)),
+        jnp.zeros((b, w, h)),
     )
     llm_token = jnp.tile(jnp.arange(0, w * 100, 100), (b, 1))
     print(
