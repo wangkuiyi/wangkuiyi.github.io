@@ -1,4 +1,4 @@
-# JAX's vmap
+# JAX's vmap: The Fundamentals
 
 [JAX documentation](https://jax.readthedocs.io/en/latest/automatic-vectorization.html) provides an example that sets both parameters, `in_axes` and `out_axes`, to the same value to explain `vmap`. However, it would be beneficial for users to have more examples with different values of `in_axes` and `out_axes` to better understand `vmap`.
 
