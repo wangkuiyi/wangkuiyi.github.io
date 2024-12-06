@@ -15,3 +15,4 @@
 - [A Minimalist HTTP Server Using `asyncio`](asyncio_serving.html)
 - [Unit Test Library Or Framework?](test_style.html)
 - [JAX's vmap: The Fundamentals](vmap.html)
+- [JAX's vmap: An Application of Speculative Decoding](vmap_spec_decode.html)
