@@ -42,7 +42,10 @@ def test_sample_seq():
 
 def test_sample_beam():
     llm_state, llm_token = jnp.zeros((d,)), jnp.arange(0, w * 100, 100)
-    print(jax.vmap(sample_seq, in_axes=(None, 0), out_axes=0)(llm_state, llm_token))
+    assert jnp.all(
+        jax.vmap(sample_seq, in_axes=(None, 0), out_axes=0)(llm_state, llm_token)
+        == jnp.array([[0, 0, 0, 0], [100, 500, 2900, 16900], [200, 1000, 5800, 33800]])
+    )
 
 
 def test_sample_beam_batched():
@@ -51,9 +54,10 @@ def test_sample_beam_batched():
         jnp.zeros((b, w, h)),
     )
     llm_token = jnp.tile(jnp.arange(0, w * 100, 100), (b, 1))
-    print(
+    assert jnp.all(
         jax.vmap(jax.vmap(sample_seq, in_axes=(None, 0), out_axes=0), in_axes=(0, 0), out_axes=0)(
             llm_state, llm_token
         )
+        == jnp.array([[[0, 0, 0, 0], [100, 500, 2900, 16900], [200, 1000, 5800, 33800]]] * 2)
     )
 ```
