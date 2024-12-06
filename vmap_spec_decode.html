@@ -1,0 +1,185 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="https://robjhyndman.com/site_libs/clipboard/clipboard.min.js"></script>
+<script src="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="https://robjhyndman.com/site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<link href="https://fonts.googleapis.com/css?family=Fira+Sans|Merriweather" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack-subset.css">
+<script type="text/javascript" src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+
+<script src='//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js'></script>
+<script> document.addEventListener('DOMContentLoaded', (event) => {
+                          document.querySelectorAll('pre.src').forEach((el) => {hljs.highlightElement(el);});}); </script>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script type="text/javascript">
+<!--/*--><![CDATA[/*><!--*/
+    MathJax.Hub.Config({
+        jax: ["input/TeX", "output/HTML-CSS"],
+        extensions: ["tex2jax.js","TeX/AMSmath.js","TeX/AMSsymbols.js",
+                     "TeX/noUndefined.js", "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"],
+        tex2jax: {
+            inlineMath: [ ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"], ["\\begin{displaymath}","\\end{displaymath}"] ],
+            skipTags: ["script","noscript","style","textarea","pre","code"],
+            ignoreClass: "tex2jax_ignore",
+            processEscapes: false,
+            processEnvironments: true,
+            preview: "TeX"
+        },
+        TeX: {extensions: ["AMSmath.js","AMSsymbols.js",  "[Contrib]/siunitx/siunitx.js", "[Contrib]/mhchem/mhchem.js"]},
+        showProcessingMessages: true,
+        displayAlign: "center",
+        displayIndent: "2em",
+
+        "HTML-CSS": {
+             scale: 1.2,
+             availableFonts: ["STIX","TeX"],
+             preferredFont: "TeX",
+             webFont: "TeX",
+             imageFont: "TeX",
+             showMathMenu: true,
+        },
+        MMLorHTML: {
+             prefer: {
+                 MSIE:    "MML",
+                 Firefox: "MML",
+                 Opera:   "HTML",
+                 other:   "HTML"
+             }
+        }
+    });
+/*]]>*///-->
+</script>
+
+<style>
+    /* Apply a max-width directly to the body and center it */
+    body {
+      max-width: 800px;    /* Limit the width */
+      margin: 0 auto;      /* Center the content */
+      padding: 20px;       /* Optional padding for better readability */
+      background-color: #f9f9f9; /* Optional background color */
+    }
+</style>
+
+</head>
+<h1 id="jaxs-vmap-an-application-of-speculative-decoding">JAX’s vmap: An
+Application of Speculative Decoding</h1>
+<p>In our recent work on a novel speculative decoding approach tailored
+for Apple Intelligence, we prototyped the idea using <a
+href="https://github.com/apple/ml-recurrent-drafter/blob/main/recurrent_drafting/modeling_drafter.py">PyTorch</a>.
+Programming the vectorized algorithm that samples token sequences from a
+draft model posed a slight challenge. We had to consider that for each
+prompt, we would sample a beam of multiple token sequences, and the
+input would be a batch of multiple prompts.</p>
+<p>This inspires me to attempt writing the non-vectorized and
+comprehensible version of the code in JAX and using <a
+href="vmap.html">JAX’s vmap</a> to automatically add the batch and beam
+dimensions. The trial was successful, as illustrated by the following
+code:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Tuple</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="dv">8</span>  <span class="co"># hidden dim of llm</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>h <span class="op">=</span> <span class="dv">4</span>  <span class="co"># hidden dim of rnn</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> <span class="dv">3</span>  <span class="co"># number of tokens drawn from rnn after the one from llm</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> <span class="dv">5</span>  <span class="co"># beam width</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="dv">2</span>  <span class="co"># batch size</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> rnn_drafter(llm_state, rnn_state, input_token) <span class="op">-&gt;</span> Tuple[jax.Array, jax.Array]:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;[d], [h], [] -&gt; [h], []&quot;&quot;&quot;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">rnn_state=</span><span class="ch">\n</span><span class="sc">{</span>rnn_state<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    rnn_state <span class="op">=</span> rnn_state <span class="op">+</span> input_token</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> rnn_state, input_token <span class="op">+</span> rnn_state.<span class="bu">sum</span>()</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sample_seq(llm_state, llm_token) <span class="op">-&gt;</span> jax.Array:</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;[h], [] -&gt; [l]&quot;&quot;&quot;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    token <span class="op">=</span> llm_token</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    rnn_state <span class="op">=</span> jnp.zeros((h,))</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    seq <span class="op">=</span> jnp.array([token], dtype<span class="op">=</span>jnp.int32)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(l):</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        rnn_state, token <span class="op">=</span> rnn_drafter(llm_state, rnn_state, token)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        seq <span class="op">=</span> jnp.append(seq, token)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> seq</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_sample_seq():</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    llm_state, llm_token <span class="op">=</span> jnp.zeros((d,)), jnp.array([<span class="dv">100</span>], dtype<span class="op">=</span>jnp.int32)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> jnp.<span class="bu">all</span>(sample_seq(llm_state, llm_token) <span class="op">==</span> jnp.arange(<span class="dv">100</span>, <span class="dv">100</span> <span class="op">+</span> l <span class="op">+</span> <span class="dv">1</span>))</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_sample_beam():</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    llm_state, llm_token <span class="op">=</span> jnp.zeros((d,)), jnp.arange(<span class="dv">0</span>, w <span class="op">*</span> <span class="dv">100</span>, <span class="dv">100</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> jnp.<span class="bu">all</span>(</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        jax.vmap(sample_seq, in_axes<span class="op">=</span>(<span class="va">None</span>, <span class="dv">0</span>), out_axes<span class="op">=</span><span class="dv">0</span>)(llm_state, llm_token)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        <span class="op">==</span> jnp.array([[<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>], [<span class="dv">100</span>, <span class="dv">500</span>, <span class="dv">2900</span>, <span class="dv">16900</span>], [<span class="dv">200</span>, <span class="dv">1000</span>, <span class="dv">5800</span>, <span class="dv">33800</span>]])</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_sample_beam_batched():</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    llm_state, rnn_state <span class="op">=</span> (</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>        jnp.zeros((b, d)),</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>        jnp.zeros((b, w, h)),</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    llm_token <span class="op">=</span> jnp.tile(jnp.arange(<span class="dv">0</span>, w <span class="op">*</span> <span class="dv">100</span>, <span class="dv">100</span>), (b, <span class="dv">1</span>))</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> jnp.<span class="bu">all</span>(</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>        jax.vmap(jax.vmap(sample_seq, in_axes<span class="op">=</span>(<span class="va">None</span>, <span class="dv">0</span>), out_axes<span class="op">=</span><span class="dv">0</span>), in_axes<span class="op">=</span>(<span class="dv">0</span>, <span class="dv">0</span>), out_axes<span class="op">=</span><span class="dv">0</span>)(</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>            llm_state, llm_token</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        <span class="op">==</span> jnp.array([[[<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>], [<span class="dv">100</span>, <span class="dv">500</span>, <span class="dv">2900</span>, <span class="dv">16900</span>], [<span class="dv">200</span>, <span class="dv">1000</span>, <span class="dv">5800</span>, <span class="dv">33800</span>]]] <span class="op">*</span> <span class="dv">2</span>)</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div>
