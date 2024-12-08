@@ -61,3 +61,5 @@ def test_sample_beam_batched():
         == jnp.array([[[0, 0, 0, 0], [100, 500, 2900, 16900], [200, 1000, 5800, 33800]]] * 2)
     )
 ```
+
+An further improvement is to replace the Python loop in `sample_seq` with `jax.lax.fori_loop`, which could be JIT-compiled.
