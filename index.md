@@ -16,4 +16,4 @@
 - [Unit Test Library Or Framework?](test_style.html)
 - [JAX's vmap: The Fundamentals](vmap.html)
 - [JAX's vmap: An Application of Speculative Decoding](vmap_spec_decode.html)
-- [Curried Functions and JAX Type Annotation](curried.html)
+- [Curried Functions and JAX Type Annotation](currying.html)
