@@ -150,11 +150,11 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <p>JAX is pure-functional, which means its tensors are immutable.
 Therefore, when you call <code>jax.vmap(f)(v)</code>, it returns a new
 tensor. The <code>out_axes</code> parameter instructs the function
-<code>jax.map(f)</code> on how to construct the resulting tensor. If
-<code>out_axes=0</code>, <code>jax.map(f)</code> packs the outputs from
+<code>jax.vmap(f)</code> on how to construct the resulting tensor. If
+<code>out_axes=0</code>, <code>jax.vmap(f)</code> packs the outputs from
 each call to <code>f</code> as rows in the result tensor. Alternatively,
 if <code>out_axes=1</code>, it packs them as columns, as illustrated in
-the following example:</p>
+the following tensor transpose example:</p>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> g(x):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x</span>
