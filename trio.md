@@ -16,21 +16,21 @@ As a Go programmer, I found it straightforward to understand Trio by drawing par
 package main
 
 func producer() chan int {
-	ch := make(chan int)
-	go func() {
-		for i := 0; i < 5; i++ {
-			ch <- i
-		}
-		close(ch)
-	}()
-	return ch
+    ch := make(chan int)
+    go func() {
+        for i := 0; i < 5; i++ {
+            ch <- i
+        }
+        close(ch)
+    }()
+    return ch
 }
 
 func main() {
-	ch := producer()
-	for x := range ch {
-		println(x)
-	}
+    ch := producer()
+    for x := range ch {
+        println(x)
+    }
 }
 ```
 
@@ -75,3 +75,85 @@ In Go, closing the channel indicates no more writings will happen.  In Trio, you
 
 Despite Python's verbose coroutine implementation, Trio provides an elegant solution that mimics Go's simplicity and power.  For developers transitioning from Go or working on complex asynchronous tasks, Trio is a robust and intuitive library.
 
+Like Go supports channel of channels, Trio allows us to put channels into channels.  Here is an example Go program:
+
+```go
+package main
+
+func number_producer() chan int {
+    ch := make(chan int)
+    go func() {
+        for i := range 5 {
+            ch <- i
+        }
+        close(ch)
+    }()
+    return ch
+}
+
+func channel_producer() chan chan int {
+    ch := make(chan chan int)
+    go func() {
+        for range 3 {
+            ch <- number_producer()
+        }
+        close(ch)
+    }()
+    return ch
+}
+
+func main() {
+    ch_of_ch := channel_producer()
+    for ch := range ch_of_ch {
+        for num := range ch {
+            println(num)
+        }
+        println("---")
+    }
+}
+```
+
+Here is the corresponding Python program that calls Trio:
+
+```python
+import trio
+
+
+async def number_producer(nursery):
+    s, r = trio.open_memory_channel(0)
+
+    async def _():
+        async with s:
+            for i in range(5):
+                await s.send(i)
+
+    nursery.start_soon(_)
+    return r
+
+
+async def channel_producer(nursery):
+    s, r = trio.open_memory_channel(0)
+
+    async def _():
+        async with s:
+            for _ in range(3):
+                ch = await number_producer(nursery)
+                await s.send(ch)
+
+    nursery.start_soon(_)
+    return r
+
+
+async def main():
+    async with trio.open_nursery() as nursery:
+        ch_of_ch = await channel_producer(nursery)
+        async with ch_of_ch:
+            async for ch in ch_of_ch:
+                async with ch:
+                    async for num in ch:
+                        print(num)
+                print("---")
+
+
+trio.run(main)
+```
