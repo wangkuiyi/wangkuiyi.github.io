@@ -17,3 +17,4 @@
 - [JAX's vmap: The Fundamentals](vmap.html)
 - [JAX's vmap: An Application of Speculative Decoding](vmap_spec_decode.html)
 - [Curried Functions and JAX Type Annotation](currying.html)
+- [Trio: Simplifying Python Coroutines with Go's Goroutine Style](trio.html)

@@ -1,4 +1,4 @@
-# Trio: Making Python's Coroutine Look Like Go's Goroutine
+# Trio: Simplifying Python Coroutines with Go's Goroutine Style
 
 Python has supported coroutines since versions 3.5 and 3.6.  However, its implementation has been criticized for being unnecessarily complicated.
 
