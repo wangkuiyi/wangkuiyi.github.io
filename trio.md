@@ -39,23 +39,26 @@ Here's the equivalent implementation in Python using Trio:
 ```python
 import trio
 
+
 async def producer(nursery):
-    send_channel, receive_channel = trio.open_memory_channel(0)
+    s, r = trio.open_memory_channel(0)
 
     async def _():
-        async with send_channel:
+        async with s:
             for i in range(5):
-                await send_channel.send(i)
+                await s.send(i)
 
     nursery.start_soon(_)
-    return receive_channel
+    return r
+
 
 async def main():
     async with trio.open_nursery() as nursery:
-        receive_channel = await producer(nursery)
-        async with receive_channel:
-            async for x in receive_channel:
+        r = await producer(nursery)
+        async with r:
+            async for x in r:
                 print(x)
+
 
 trio.run(main)
 ```
