@@ -23,7 +23,7 @@ print(jax.vmap(f, in_axes=1)(v)) # batch=2
 
 ## `out_axes`
 
-JAX is pure-functional, which means its tensors are immutable.  Therefore, when you call `jax.vmap(f)(v)`, it returns a new tensor.  The `out_axes` parameter instructs the function `jax.map(f)` on how to construct the resulting tensor.  If `out_axes=0`, `jax.map(f)` packs the outputs from each call to `f` as rows in the result tensor.  Alternatively, if `out_axes=1`, it packs them as columns, as illustrated in the following example:
+JAX is pure-functional, which means its tensors are immutable.  Therefore, when you call `jax.vmap(f)(v)`, it returns a new tensor.  The `out_axes` parameter instructs the function `jax.vmap(f)` on how to construct the resulting tensor.  If `out_axes=0`, `jax.vmap(f)` packs the outputs from each call to `f` as rows in the result tensor.  Alternatively, if `out_axes=1`, it packs them as columns, as illustrated in the following tensor transpose example:
 
 ```python
 def g(x):
