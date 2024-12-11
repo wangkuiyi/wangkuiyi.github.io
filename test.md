@@ -6,8 +6,10 @@
 
 # Test the LaTex Rendering
 
-$E=mc^2$
+GitHub renders my Markdown files usign kramdown.  This is inline math $$E=mc^2$$.
+
+Display math must be separated from the text by a blank line:
 
 $$E=\frac{m}{c^2}$$
 
-$$ E=\frac{m}{c^2} $$
+And this is the inline version of the above equation $$ E=\frac{m}{c^2} $$.
