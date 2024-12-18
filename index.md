@@ -18,3 +18,4 @@
 - [JAX's vmap: An Application of Speculative Decoding](vmap_spec_decode.html)
 - [Curried Functions and JAX Type Annotation](currying.html)
 - [Trio: Simplifying Python Coroutines with Go's Goroutine Style](trio.html)
+- [Using Conv2D for Linear Projection on Apple Neural Engine](ane.html)
