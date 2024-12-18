@@ -41,7 +41,7 @@ assert torch.allclose(linear_output, conv_output)
 
 ## How Conv2d Works
 
-The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an m×n region in the input m×n grayscale image.  The m×n weights are referred to as the kernel of the Conv2d operation.  If  m = n = 1 , the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
+The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an m×n region in the input m×n grayscale image.  The m×n weights are referred to as the kernel of the Conv2d operation.  If  m=n=1 , the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
 
 In the generalized form of Conv2d, input images can have multiple channels.  For instance, an image may have three channels for red, green, and blue.  Convolution over a multi-channel image requires a separate kernel for each channel.  Specifically:
 
