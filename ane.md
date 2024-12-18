@@ -9,12 +9,12 @@ The 2020 blog post introduces this replacement as *Principle 1: Picking the Righ
 
 ## Empirical Verification
 
-The code snippet below demonstrates the interchangeability between `nn.Conv2d` and `nn.Linear`.  When projecting a batch of B I-dimensional vectors into the O-dimensional space, you can either:
+The code snippet below demonstrates the interchangeability between `nn.Conv2d` and `nn.Linear`.  When projecting a batch of $B$ $I$-dimensional vectors into the $O$-dimensional space, you can either:
 
-1. use a traditional I×O linear projection matrix, or
-2. reshape the input batch to shape (B, I, 1, 1) and use a Conv2d layer with a kernel of shape (O, 1, 1).
+1. use a traditional $I\times O$ linear projection matrix, or
+2. reshape the input batch to shape $(B, I, 1, 1)$ and use a Conv2d layer with a kernel of shape $(O, I, 1, 1)$.
 
-The output of the Conv2d operation will have the shape (B, O, 1, 1), which can be reshaped to (B, O), yielding results identical to the linear projection. This equivalence holds whether or not a bias term is included.
+The output of the Conv2d operation will have the shape $(B, O, 1, 1)$, which can be reshaped to $(B, O)$, yielding results identical to the linear projection. This equivalence holds whether or not a bias term is included.
 
 ```python
 import torch
@@ -41,22 +41,22 @@ assert torch.allclose(linear_output, conv_output)
 
 ## How Conv2d Works
 
-The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an m×n region in the input m×n grayscale image.  The m×n weights are referred to as the kernel of the Conv2d operation.  If  m=n=1 , the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
+The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an $m\times n$ region in the input $m\times n$ grayscale image.  The $m\times n$ weights are referred to as the kernel of the Conv2d operation.  If $m=n=1$, the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
 
 In the generalized form of Conv2d, input images can have multiple channels.  For instance, an image may have three channels for red, green, and blue.  Convolution over a multi-channel image requires a separate kernel for each channel.  Specifically:
 
 1. Each input channel is convolved with its corresponding kernel, resulting in one output image per channel.
-2. The I-channel outputs are then summed to produce a single output channel.
+2. The $I$-channel outputs are then summed to produce a single output channel.
 
-If the output is also multi-channel (e.g., O channels), the Conv2d operation requires O groups of I-channel kernels.  Each kernel group processes the I-channel input independently, and the results are aggregated into an O-channel output.
+If the output is also multi-channel (e.g., $O$ channels), the Conv2d operation requires $O$ groups of $I$-channel kernels.  Each kernel group processes the $I$-channel input independently, and the results are aggregated into an $O$-channel output.
 
-## Applying Conv2d to Linear Projection
+## Conv2d As Linear Projection
 
-To linearly project an I-dimensional input vector into an O-dimensional space using Conv2d, we can reinterpret the vector as an I-channel 1×1 image:
+To linearly project an $I$-dimensional input vector into an $O$-dimensional space using Conv2d, we can reinterpret the vector as an $I$-channel $1\times 1$ image:
 
-1. The O×I projection matrix is represented as O groups of I-channel 1×1 kernels.
-2. The Conv2d operation applies these kernels to the input image, producing an O-channel 1×1 output.
+1. The $O \times I$ projection matrix is represented as $O$ groups of $I$-channel $1\times 1$ kernels.
+2. The Conv2d operation applies these kernels to the input image, producing an $O$-channel $1\times 1$ output image.
 
-When generalized to linear projection of a batch of B input vectors, we interprete the input as B 1x1 images, each with I channels.  The output of Conv2d would be a batch of B 1x1 images, each with O channels.  Then, the equivalence aligns with the explanation in the previous section.
+When generalized to linear projection of a batch of $B$ input vectors, we interprete the input as $B$ $1\times 1$ images, each with $I$ channels.  The output of Conv2d would be a batch of $B$ $1\times 1$ images, each with $O$ channels.  Then, the equivalence aligns with the explanation in the previous section.
 
 This approach bridges the gap between Conv2d and Linear, allowing the efficient use of convolutional operations for tasks traditionally handled by linear layers on Apple Neural Engine.
