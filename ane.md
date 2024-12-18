@@ -11,7 +11,7 @@ The 2020 blog post introduces this replacement as *Principle 1: Picking the Righ
 
 The code snippet below demonstrates the interchangeability between `nn.Conv2d` and `nn.Linear`.  When projecting a batch of $B$ $I$-dimensional vectors into the $O$-dimensional space, you can either:
 
-1. use a traditional $I\times O$ linear projection matrix, or
+1. use a traditional $O\times I$ linear projection matrix, or
 2. reshape the input batch to shape $(B, I, 1, 1)$ and use a Conv2d layer with a kernel of shape $(O, I, 1, 1)$.
 
 The output of the Conv2d operation will have the shape $(B, O, 1, 1)$, which can be reshaped to $(B, O)$, yielding results identical to the linear projection. This equivalence holds whether or not a bias term is included.
@@ -54,7 +54,7 @@ If the output is also multi-channel (e.g., $O$ channels), the Conv2d operation r
 
 To linearly project an $I$-dimensional input vector into an $O$-dimensional space using Conv2d, we can reinterpret the vector as an $I$-channel $1\times 1$ image:
 
-1. The $O \times I$ projection matrix is represented as $O$ groups of $I$-channel $1\times 1$ kernels.
+1. The $O\times I$ projection matrix is represented as $O$ groups of $I$-channel $1\times 1$ kernels.
 2. The Conv2d operation applies these kernels to the input image, producing an $O$-channel $1\times 1$ output image.
 
 When generalized to linear projection of a batch of $B$ input vectors, we interprete the input as $B$ $1\times 1$ images, each with $I$ channels.  The output of Conv2d would be a batch of $B$ $1\times 1$ images, each with $O$ channels.  Then, the equivalence aligns with the explanation in the previous section.
