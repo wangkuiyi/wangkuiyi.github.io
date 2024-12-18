@@ -1,4 +1,4 @@
-# Using Conv2D for Linear Layers on Apple Neural Engine
+# Using Conv2D for Linear Projection on Apple Neural Engine
 
 If you are interested in Apple Intelligence, you may wanted to check out the 2022 blog post [Deploying Transformers on the Apple Neural Engine](https://machinelearning.apple.com/research/neural-engine-transformers) and the more recent [Deploying Attention-Based Vision Transformers to Apple Neural Engine](https://machinelearning.apple.com/research/vision-transformers).  Both blog posts feature open sourced code that demonstrate the use of Conv2d layers as replacements for linear projection:
 
