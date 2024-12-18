@@ -1,11 +1,11 @@
 # Using Conv2D for Linear Projection on Apple Neural Engine
 
-If you are interested in Apple Intelligence, you may wanted to check out the 2022 blog post [Deploying Transformers on the Apple Neural Engine](https://machinelearning.apple.com/research/neural-engine-transformers) and the more recent [Deploying Attention-Based Vision Transformers to Apple Neural Engine](https://machinelearning.apple.com/research/vision-transformers).  Both blog posts feature open sourced code that demonstrate the use of Conv2d layers as replacements for linear projection:
+If you are interested in Apple Intelligence, you may wanted to check out the 2022 blog post [Deploying Transformers on the Apple Neural Engine](https://machinelearning.apple.com/research/neural-engine-transformers) and the more recent [Deploying Attention-Based Vision Transformers to Apple Neural Engine](https://machinelearning.apple.com/research/vision-transformers).  Both blog posts feature open sourced code that demonstrates the use of Conv2d layers as replacements for linear projection:
 
 1. [DistilBERT implementation](https://github.com/apple/ml-ane-transformers/blob/main/ane_transformers/huggingface/distilbert.py)
 2. [Vision Transformers implementation](https://github.com/apple/ml-vision-transformers-ane/blob/main/vision_transformers/attention_utils.py)
 
-The 2020 blog post introduces this replacement as *Principle 1: Picking the Right Data Format* of improving the Apple Neural Engine (ANE) performance.
+The 2022 blog post introduces this replacement as *Principle 1: Picking the Right Data Format* of improving the Apple Neural Engine (ANE) performance.
 
 ## Empirical Verification
 
