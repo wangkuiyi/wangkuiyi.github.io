@@ -1,6 +1,6 @@
 # Using Conv2D for Linear Projection on Apple Neural Engine
 
-If you are interested in Apple Intelligence, you may wanted to check out the 2022 blog post [Deploying Transformers on the Apple Neural Engine](https://machinelearning.apple.com/research/neural-engine-transformers) and the more recent [Deploying Attention-Based Vision Transformers to Apple Neural Engine](https://machinelearning.apple.com/research/vision-transformers).  Both blog posts feature open sourced code that demonstrates the use of Conv2d layers as replacements for linear projection:
+If you are interested in Apple Intelligence, you may want to check out the 2022 blog post [Deploying Transformers on the Apple Neural Engine](https://machinelearning.apple.com/research/neural-engine-transformers) and the more recent [Deploying Attention-Based Vision Transformers to Apple Neural Engine](https://machinelearning.apple.com/research/vision-transformers).  Both blog posts feature open sourced code that demonstrates the use of Conv2d layers as replacements for linear projection:
 
 1. [DistilBERT implementation](https://github.com/apple/ml-ane-transformers/blob/main/ane_transformers/huggingface/distilbert.py)
 2. [Vision Transformers implementation](https://github.com/apple/ml-vision-transformers-ane/blob/main/vision_transformers/attention_utils.py)
@@ -41,14 +41,14 @@ assert torch.allclose(linear_output, conv_output)
 
 ## How Conv2d Works
 
-The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an $m\times n$ region in the input $m\times n$ grayscale image.  The $m\times n$ weights are referred to as the kernel of the Conv2d operation.  If $m=n=1$, the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
+The simplest form of Conv2d outputs a grayscale image where each pixel is the weighted average of an $m\times n$ region in the input $H\times W$ grayscale image.  The $m\times n$ weights are referred to as the kernel of the Conv2d operation.  If $m=n=1$, the kernel contains only a single scalar weight, and the Conv2d operation effectively scales each pixel of the input image by this weight.
 
-In the generalized form of Conv2d, input images can have multiple channels.  For instance, an image may have three channels for red, green, and blue.  Convolution over a multi-channel image requires a separate kernel for each channel.  Specifically:
+In the generalized form of Conv2d, input images can have multiple channels (e.g., $I$ channels).  For instance, an image may have three channels for red, green, and blue.  Convolution over a multi-channel image requires a separate kernel for each channel.  Specifically:
 
 1. Each input channel is convolved with its corresponding kernel, resulting in one output image per channel.
 2. The $I$-channel outputs are then summed to produce a single output channel.
 
-If the output is also multi-channel (e.g., $O$ channels), the Conv2d operation requires $O$ groups of $I$-channel kernels.  Each kernel group processes the $I$-channel input independently, and the results are aggregated into an $O$-channel output.
+If the output is also multi-channel (e.g., $O$ channels), the Conv2d operation requires $O$ groups of $I$-channel kernels.  Each kernel group processes the $I$-channel input independently, and the results are concatenated into an $O$-channel output.
 
 ## Conv2d As Linear Projection
 

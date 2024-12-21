@@ -115,7 +115,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </head>
 <h1 id="using-conv2d-for-linear-projection-on-apple-neural-engine">Using
 Conv2D for Linear Projection on Apple Neural Engine</h1>
-<p>If you are interested in Apple Intelligence, you may wanted to check
+<p>If you are interested in Apple Intelligence, you may want to check
 out the 2022 blog post <a
 href="https://machinelearning.apple.com/research/neural-engine-transformers">Deploying
 Transformers on the Apple Neural Engine</a> and the more recent <a
@@ -176,16 +176,17 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <h2 id="how-conv2d-works">How Conv2d Works</h2>
 <p>The simplest form of Conv2d outputs a grayscale image where each
 pixel is the weighted average of an <span class="math inline">\(m\times
-n\)</span> region in the input <span class="math inline">\(m\times
-n\)</span> grayscale image. The <span class="math inline">\(m\times
+n\)</span> region in the input <span class="math inline">\(H\times
+W\)</span> grayscale image. The <span class="math inline">\(m\times
 n\)</span> weights are referred to as the kernel of the Conv2d
 operation. If <span class="math inline">\(m=n=1\)</span>, the kernel
 contains only a single scalar weight, and the Conv2d operation
 effectively scales each pixel of the input image by this weight.</p>
 <p>In the generalized form of Conv2d, input images can have multiple
-channels. For instance, an image may have three channels for red, green,
-and blue. Convolution over a multi-channel image requires a separate
-kernel for each channel. Specifically:</p>
+channels (e.g., <span class="math inline">\(I\)</span> channels). For
+instance, an image may have three channels for red, green, and blue.
+Convolution over a multi-channel image requires a separate kernel for
+each channel. Specifically:</p>
 <ol type="1">
 <li>Each input channel is convolved with its corresponding kernel,
 resulting in one output image per channel.</li>
@@ -197,7 +198,7 @@ class="math inline">\(O\)</span> channels), the Conv2d operation
 requires <span class="math inline">\(O\)</span> groups of <span
 class="math inline">\(I\)</span>-channel kernels. Each kernel group
 processes the <span class="math inline">\(I\)</span>-channel input
-independently, and the results are aggregated into an <span
+independently, and the results are concatenated into an <span
 class="math inline">\(O\)</span>-channel output.</p>
 <h2 id="conv2d-as-linear-projection">Conv2d As Linear Projection</h2>
 <p>To linearly project an <span
