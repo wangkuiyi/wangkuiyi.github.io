@@ -20,3 +20,4 @@
 - [Trio: Simplifying Python Coroutines with Go's Goroutine Style](trio.html)
 - [Using Conv2D for Linear Projection on Apple Neural Engine](ane.html)
 - [JAX’s Device Mesh and Tensor Sharding](mesh.html)
+- [The Right Way to Configure LLM Training](config.html)
