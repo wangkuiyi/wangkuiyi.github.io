@@ -16,7 +16,8 @@ Given an input array $x_i$ where $i=1..N$, the traditional algorithm proceeds by
 
 $$
 \begin{aligned}
-m_1 \quad & \ldots & m_i=\max(m_{i-1}, x_m) \quad        & \ldots & m_N \\
+x_1 \quad & \ldots & x_i                                 & \ldots & x_N \\
+m_1 \quad & \ldots & m_i=\max(m_{i-1}, x_i) \quad        & \ldots & m_N \\
 d_1 \quad & \ldots & d_i=d_{i-1} +\exp(x_i-m_N) \quad    & \ldots & d_N \\
 a_1 \quad & \ldots & a_i=\frac{\exp(x_i-m_N)}{d_N} \quad & \ldots & a_N \\
 \end{aligned}
@@ -26,7 +27,7 @@ However, we prefer inductive processes that can run in parallel on a GPU. This w
 
 To address this, let’s explore whether we can construct a surrogate of $d_i$, denoted as $\delta_i$, that allows the inductive processes for $m_i$ and $\delta_i$ to run in parallel. Specifically, we want $\delta_i$ to satisfy the following properties:
 
-1. We want $\delta_i = \sum_{j=1}^i \exp(x_j - m_i)$, so that $\delta_N = \sum_{j=1}^N \exp(x_j - m_N)$, which is required to compute $a_i$.
+1. We want $\delta_i = \sum_{j=1}^i \exp(x_j - m_i)$, so that $\delta_N = \sum_{j=1}^N \exp(x_j - m_N)$, which is required to compute $a_i$'s.
 2. Since $\delta_i$ is inductive, it should depend on $\delta_{i-1}$.
 3. To allow parallel execution, $\delta_i$ must not depend on future values such as $x_{i+1}, \ldots$ or $m_{i+1}, \ldots$.
 
