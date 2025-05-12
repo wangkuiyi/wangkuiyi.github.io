@@ -4,15 +4,15 @@ This is the second part of my reading notes of [Zihao Ye's note on FlashAttentio
 
 The definition of softmax is as follows:
 
-$$\left\{ \frac{\exp(x_i)}{\sum_{j=1}^N \exp(x_j)} \right\}_{i=1}^N$$
+$$ \frac{\exp(x_i)}{\sum_{j=1}^N \exp(x_j)} \text{  for  } i=1..N$$
 
 It is well-known numerically instable -- if any $x_i\geq 11$, $\exp(x_i)$ exceeds the maximum value of float16. To address this, we compute an alternative form which gives equivalent result but numerically stable:
 
-$$\left\{ \frac{\exp(x_i-m)}{\sum_{j=1}^N \exp(x_j-m)}\right\}_{i=1}^N $$
+$$\frac{\exp(x_i-m)}{\sum_{j=1}^N \exp(x_j-m)} \text{  for  } i=1..N $$
 
 where $m=\max_{j=1}^N x_j$.  This form is safe because $x_i - m \leq 0$, ensuring that $0 < \exp(x_i - m) \leq 1$.
 
-Given an input array ${x_i}{i=1}^N$, the traditional algorithm proceeds by performing the following three inductive processes sequentially to compute the result array ${a_i}{i=1}^N$:
+Given an input array $x_i$ where $i=1..N$, the traditional algorithm proceeds by performing the following three inductive processes sequentially to compute the result array $a_i$:
 
 $$
 \begin{aligned}
@@ -22,7 +22,7 @@ a_1 \quad & \ldots & a_i=\frac{\exp(x_i-m_N)}{d_N} \quad & \ldots & a_N \\
 \end{aligned}
 $$
 
-However, we prefer inductive processes that can run in parallel on a GPU. This would allow us to load the array ${x_i}{i=1}^N$ once and save the result ${a_i}{i=1}^N$ without needing to store or load intermediate results like ${m_i}$ and ${d_i}$. Unfortunately, the three processes above cannot run in parallel because $d_i$ depends on $m_N$, and $a_i$ depends on both $d_N$ and $m_N$.
+However, we prefer inductive processes that can run in parallel on a GPU. This would allow us to load the array $x_i$'s once and save the result $a_i$'s without needing to store or load intermediate results like ${m_i}$ and ${d_i}$. Unfortunately, the three processes above cannot run in parallel because $d_i$ depends on $m_N$, and $a_i$ depends on both $d_N$ and $m_N$.
 
 To address this, let’s explore whether we can construct a surrogate of $d_i$, denoted as $\delta_i$, that allows the inductive processes for $m_i$ and $\delta_i$ to run in parallel. Specifically, we want $\delta_i$ to satisfy the following properties:
 
