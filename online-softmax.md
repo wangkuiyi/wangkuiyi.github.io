@@ -8,7 +8,7 @@ $$\left\{ \frac{\exp(x_i)}{\sum_{j=1}^N \exp(x_j)} \right\}_{i=1}^N$$
 
 It is well-known numerically instable -- if any $x_i\geq 11$, $\exp(x_i)$ exceeds the maximum value of float16. To address this, we compute an alternative form which gives equivalent result but numerically stable:
 
-$$ \left\{ \frac{\exp(x_i-m)}{\sum_{j=1}^N \exp(x_j-m)} \right\}_{i=1}^N $$
+$$\left\{ \frac{\exp(x_i-m)}{\sum_{j=1}^N \exp(x_j-m)}\right\}_{i=1}^N $$
 
 where $m=\max_{j=1}^N x_j$.  This form is safe because $x_i - m \leq 0$, ensuring that $0 < \exp(x_i - m) \leq 1$.
 
