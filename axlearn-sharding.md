@@ -120,8 +120,10 @@ class TensorSpec:
 
 @dataclasses.dataclass
 class ParameterSpec(TensorSpec):
-    ...
+    ...  # initializer, factorization, fan_axes, weight_decay_scale
 ```
+
+> **Historical note:** AXLearn development began in February 2022, when JAX's sharding APIs were still experimental (`jax.experimental.pjit`). JAX 0.4.1 (December 2022) later introduced stable APIs like `jax.Array` and `NamedSharding`. AXLearn's `ParameterSpec` and `TensorSpec` were designed to insulate training code from these evolving APIs, while also bundling sharding with training-specific metadata (initializer, factorization, weight decay) that JAX's `PartitionSpec` doesn't handle.
 
 The key field for sharding is `mesh_axes`, which references the named axes from `mesh_axis_names`. For example:
 
