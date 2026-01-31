@@ -65,24 +65,23 @@ Final mesh: `(1, 16, 1, 256, 1, 8, 1)`
 Different hardware topologies may require different sharding strategies. The `mesh_rules` field allows pattern-based overrides ([trainer.py#L127-L137](https://github.com/apple/axlearn/blob/main/axlearn/common/trainer.py)):
 
 ```python
-# An optional list of (regex, MeshShape) pairs to override the default mesh.
-# Given a `mesh_selector` string (usually representing the device type),
-# the first rule with a regex that matches will determine the mesh shape.
-mesh_rules: Optional[Sequence[tuple[str, Optional[MeshShape]]]] = None
+class SpmdTrainer(Module):
+  class Config(Module.Config):
+    mesh_rules: Optional[Sequence[tuple[str, Optional[MeshShape]]]] = None
 ```
 
 Example configuration:
 
 ```python
-mesh_shape = mesh_shape_from_axes(data=-1, fsdp=8),  # default
+mesh_shape = mesh_shape_from_axes(data=-1, fsdp=256, track=8),  # default for 32K
 mesh_rules = (
-    ("tpu-v5p-4096", mesh_shape_from_axes(data=-1, fsdp=8)),
-    ("tpu-v5p-1024", mesh_shape_from_axes(data=-1, fsdp=16)),
-    ("tpu-v6e-256.*", mesh_shape_from_axes(data=-1, fsdp=128)),
+    ("tpu-v5p-4096-8", mesh_shape_from_axes(data=-1, fsdp=256, track=8)),  # 8 slices × 4096 = 32K
+    ("tpu-v5p-4096-2", mesh_shape_from_axes(data=-1, fsdp=128, track=4)),  # 2 slices × 4096 = 8K
+    ("tpu-v6e-2048", mesh_shape_from_axes(data=-1, fsdp=64, track=1)),     # single slice = 4K
 )
 ```
 
-At launch time, a `--mesh_selector` flag (e.g., `--mesh_selector=tpu-v5p-1024`) is matched against these patterns using regex. The `select_mesh_config` function handles this ([trainer.py#L1357-L1379](https://github.com/apple/axlearn/blob/main/axlearn/common/trainer.py)):
+At launch time, a `--mesh_selector` flag (e.g., `--mesh_selector=tpu-v5p-4096-8`) is matched against these patterns using regex. The `select_mesh_config` function handles this ([trainer.py#L1357-L1379](https://github.com/apple/axlearn/blob/main/axlearn/common/trainer.py)):
 
 ```python
 def select_mesh_config(trainer_config: SpmdTrainer.Config, *, mesh_selector: str):
@@ -110,31 +109,22 @@ This produces a `jax.sharding.Mesh` object that maps physical devices to the nam
 
 ### 2.1 ParameterSpec
 
-AXLearn uses `ParameterSpec` to describe layer parameters ([base_layer.py#L159-L192](https://github.com/apple/axlearn/blob/main/axlearn/common/base_layer.py)):
+AXLearn uses `ParameterSpec` to describe layer parameters. It inherits from `TensorSpec` ([utils.py](https://github.com/apple/axlearn/blob/main/axlearn/common/utils.py)) and adds training-specific fields ([base_layer.py](https://github.com/apple/axlearn/blob/main/axlearn/common/base_layer.py)):
 
 ```python
 @dataclasses.dataclass
+class TensorSpec:
+    shape: Sequence[int]
+    dtype: Optional[jnp.dtype] = None
+    mesh_axes: Optional[jax.sharding.PartitionSpec] = None  # sharding spec
+
+@dataclasses.dataclass
 class ParameterSpec(TensorSpec):
-    """Specification of a layer parameter.
-
-    Inherits from TensorSpec:
-        shape: The shape of the parameter tensor.
-        dtype: The data type. If None, uses the layer's default dtype.
-        mesh_axes: Partitioning specification for the parameter.
-            - If None, the parameter will be replicated.
-            - If a sequence, it should have exactly len(shape) elements.
-            - mesh_axes[i] describes partitioning for shape[i], where each 
-              value can be: None, 'model', 'data', 'fsdp', etc.
-
-    Attributes:
-        initializer: The initializer for the parameter.
-        factorization: For AdaFactor optimizer's second-moment estimation.
-        fan_axes: For Xavier/He initialization.
-        weight_decay_scale: Per-parameter weight decay scale.
-    """
+    ...
 ```
 
-The key field is `mesh_axes`, which references the named axes from `mesh_axis_names`. For example:
+The key field for sharding is `mesh_axes`, which references the named axes from `mesh_axis_names`. For example:
+
 - `mesh_axes=("fsdp", "model")` — shard dim 0 across `fsdp`, dim 1 across `model`
 - `mesh_axes=(None, "model")` — replicate dim 0, shard dim 1 across `model`
 - `mesh_axes=(None, None)` — fully replicate the parameter
@@ -375,7 +365,7 @@ During the backward pass:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Launch Time                                 │
 ├─────────────────────────────────────────────────────────────────────┤
-│  1. --mesh_selector flag specifies hardware (e.g., "tpu-v5p-1024")  │
+│  1. --mesh_selector flag specifies hardware (e.g., "tpu-v5p-4096-8")│
 │  2. select_mesh_config() matches against mesh_rules                 │
 │  3. mesh_shape is finalized (with -1 inferred from device count)    │
 └─────────────────────────────────────────────────────────────────────┘
