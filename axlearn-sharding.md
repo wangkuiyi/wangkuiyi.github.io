@@ -1,16 +1,16 @@
 # Model Sharding in AXLearn
 
-This note explains how [AXLearn](https://github.com/apple/axlearn), the open-source framework [used to train Apple Foundation Models](https://machinelearning.apple.com/research/introducing-apple-foundation-models), applies JAX's sharding primitives to enable distributed training across thousands of accelerators. For JAX fundamentals on device meshes and `PartitionSpec`, see [mesh.md](mesh.md).
+This note explains how [AXLearn](https://github.com/apple/axlearn), the open-source framework [used to train Apple Foundation Models](https://machinelearning.apple.com/research/introducing-apple-foundation-models), applies JAX's sharding primitives to enable distributed training across tens of thousands of accelerators. For JAX fundamentals on device meshes and `PartitionSpec`, see [mesh.md](mesh.md).
 
 ## Overview
 
 Training large models requires distributing both data and model parameters across many devices. AXLearn provides a declarative approach:
 
-1. **Mesh configuration** — The trainer config defines a logical device mesh with **named axes** and the number of devices along each axis. For example, a 32K-device mesh might be configured as `mesh_shape=(1, 128, 1, 256, 1, 1)` with `mesh_axis_names=("pipeline", "data", "expert", "fsdp", "seq", "model")`, meaning 128 devices for data parallelism and 256 for FSDP. Configs can also define `mesh_rules` to select different mesh shapes based on the hardware (e.g., different settings for 1K vs 32K devices).
+1. **Mesh configuration** — The trainer config defines a logical device mesh with **named axes** and the number of devices along each axis. For example, a 32K-device mesh might be configured as `mesh_shape=(1, 16, 1, 256, 1, 8, 1)` with `mesh_axis_names=("pipeline", "data", "expert", "fsdp", "seq", "track", "model")`, using 16 devices for data parallelism, 256 for FSDP, and 8 for [track parallelism](https://machinelearning.apple.com/research/apple-foundation-models-2025-updates) (16 × 256 × 8 = 32,768). Configs can also define `mesh_rules` to select different mesh shapes based on the hardware.
 
 2. **Layer specs** — Each layer declares how its parameters should be sharded by referencing axis names (not sizes). For example, a weight matrix of shape `(4096, 1024)` with `mesh_axes=("fsdp", None)` will have its first dimension sharded across the 256 FSDP devices, so each device holds a `(16, 1024)` slice.
 
-3. **Automatic collection** — Each layer's sharding declaration (including `mesh_axes`) is wrapped in a `ParameterSpec`. The trainer traverses the model hierarchy (Model → Decoder → Attention → Linear, etc.) to gather all specs into a nested dict (pytree) that mirrors the model structure.
+3. **Automatic collection** — Each layer's sharding declaration (including `mesh_axes`) is wrapped in a `ParameterSpec`. During initialization, the trainer traverses the model hierarchy (Model → Decoder → Attention → Linear, etc.) to gather all specs into a nested dict (pytree) that mirrors the model structure.
 
 4. **pjit integration** — The collected specs are passed to JAX's `pjit`, which compiles SPMD code that automatically inserts collective operations (all-reduce, all-gather) and ensures each device only holds its shard of the parameters.
 
@@ -21,77 +21,44 @@ Training large models requires distributing both data and model parameters acros
 The `SpmdTrainer.Config` defines the device mesh via two fields ([trainer.py#L120-L122](https://github.com/apple/axlearn/blob/main/axlearn/common/trainer.py)):
 
 ```python
-class Config(Module.Config):
-    # The mesh shape. Use `mesh_rules` to set different mesh shapes 
-    # depending on the hardware platform.
+class SpmdTrainer(Module):
+  class Config(Module.Config):
     mesh_shape: Required[Union[MeshShape, HybridMeshShape]] = REQUIRED
-    
-    # The mesh axis names. Can be referenced in ParameterSpec.mesh_axes.
     mesh_axis_names: Required[Sequence[str]] = REQUIRED
 ```
 
 For example, a config might specify:
 
 ```python
-mesh_shape = (1, -1, 1, 128, 1, 1)
-mesh_axis_names = ("pipeline", "data", "expert", "fsdp", "seq", "model")
+mesh_shape = (1, 16, 1, 256, 1, 8, 1)
+mesh_axis_names = ("pipeline", "data", "expert", "fsdp", "seq", "track", "model")
 ```
 
-This creates a 6D logical mesh where:
-- Most axes have size 1 (unused)
-- `fsdp` axis has 128 devices for fully-sharded data parallelism
-- `data` axis is `-1`, meaning "infer from total devices"
+This creates a 7D logical mesh where:
+- `data` axis has 16 devices for data parallelism
+- `fsdp` axis has 256 devices for fully-sharded data parallelism
+- `track` axis has 8 devices for track parallelism (used in [PT-MoE architectures](https://machinelearning.apple.com/research/apple-foundation-models-2025-updates))
+- Other axes have size 1 (unused)
 
 ### 1.2 mesh_shape_from_axes Helper
 
-AXLearn provides a helper to construct mesh shapes more readably ([common.py#L158-L188](https://github.com/apple/axlearn/blob/main/axlearn/experiments/text/gpt/common.py)):
+Instead of writing raw tuples like `(1, 16, 1, 256, 1, 8, 1)` and remembering which position is which axis, AXLearn provides a helper with named arguments:
 
 ```python
-def mesh_shape_from_axes(
-    *,
-    pipeline: int = 1,
-    data: int = 1,
-    expert: int = 1,
-    fsdp: int = 1,
-    seq: int = 1,
-    model: int = 1,
-) -> Sequence[int]:
-    """Builds a 6D logical mesh from the provided spec.
-
-    Args:
-        pipeline: Pipeline-parallelism.
-        data: Data-parallelism. Model state fully replicated over this axis.
-        expert: Expert-parallelism for MoE models.
-        fsdp: Fully-sharded data parallelism.
-        seq: Sequence parallelism.
-        model: Tensor/model parallelism.
-
-    Returns:
-        A tuple describing the logical mesh shape.
-    """
-    return tuple(
-        max(x, 1) if x != -1 else -1 
-        for x in [pipeline, data, expert, fsdp, seq, model]
-    )
+mesh_shape_from_axes()                          # → (1, 1, 1, 1, 1, 1, 1)
+mesh_shape_from_axes(data=16, fsdp=256, track=8)  # → (1, 16, 1, 256, 1, 8, 1)
+mesh_shape_from_axes(data=-1, fsdp=256, track=8)  # → (1, -1, 1, 256, 1, 8, 1)
 ```
 
-Examples:
-
-```python
-mesh_shape_from_axes()                    # → (1, 1, 1, 1, 1, 1)
-mesh_shape_from_axes(data=-1, fsdp=128)   # → (1, -1, 1, 128, 1, 1)
-mesh_shape_from_axes(fsdp=8, model=4)     # → (1, 1, 1, 8, 1, 4)
-```
-
-The special value `-1` means "infer at runtime". For instance, on 4096 TPU chips with `mesh_shape=(1, -1, 1, 128, 1, 1)`:
+The special value `-1` means "infer at runtime". For instance, on 32K TPU chips with `mesh_shape_from_axes(data=-1, fsdp=256, track=8)`:
 
 ```
-total = pipeline × data × expert × fsdp × seq × model
-4096  = 1 × data × 1 × 128 × 1 × 1
-data  = 4096 / 128 = 32
+total  = pipeline × data × expert × fsdp × seq × track × model
+32,768 = 1 × data × 1 × 256 × 1 × 8 × 1
+data   = 32,768 / (256 × 8) = 16
 ```
 
-Final mesh: `(1, 32, 1, 128, 1, 1)`
+Final mesh: `(1, 16, 1, 256, 1, 8, 1)`
 
 ### 1.3 mesh_rules: Hardware-Specific Overrides
 
@@ -372,16 +339,16 @@ When `pjit` compiles the function:
 
 ### 4.3 Concrete Example
 
-For a weight with `PartitionSpec("fsdp", None)` on a mesh with `fsdp=128`:
+For a weight with `PartitionSpec("fsdp", None)` on a mesh with `fsdp=256`:
 
 ```
 Full weight shape: [4096, 1024]
-Each device holds: [4096/128, 1024] = [32, 1024]
+Each device holds: [4096/256, 1024] = [16, 1024]
 
-Device 0:   weight[0:32, :]
-Device 1:   weight[32:64, :]
+Device 0:   weight[0:16, :]
+Device 1:   weight[16:32, :]
 ...
-Device 127: weight[4064:4096, :]
+Device 255: weight[4080:4096, :]
 ```
 
 During the forward pass:
@@ -439,3 +406,4 @@ During the backward pass:
 - [mesh.md](mesh.md) — JAX device mesh and `PartitionSpec` basics
 - [dp+fsdp+tp/](dp+fsdp+tp/) — Diagrams comparing parallelism strategies
 - [AXLearn GitHub](https://github.com/apple/axlearn) — Source code
+- [Apple Intelligence Foundation Language Models Tech Report](https://machinelearning.apple.com/research/apple-foundation-models-tech-report-2025) — PT-MoE architecture details
